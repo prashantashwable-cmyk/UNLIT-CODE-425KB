@@ -1,0 +1,12 @@
+{
+  "_note": "PROPOSED defaults implementing the 'safe until decided' behaviour from docs/data/decisions.json. Flip only after the named decision is answered in writing.",
+  "live_payouts":              {"default": false, "until": "AIEC-DEC-017 + payout partner + CA"},
+  "payment_release_automation":{"default": false, "until": "AIEC-DEC-004, 005, 008"},
+  "live_contractor_onboarding":{"default": false, "until": "AIEC-DEC-016 + lawyer"},
+  "noc_issuance":              {"default": false, "until": "lawyer (contractor model)"},
+  "public_rescue_page":        {"default": false, "until": "AIEC-DEC-011 + licensed lift engineer"},
+  "worker_rate_display":       {"default": false, "until": "owner sets rates"},
+  "call_recording":            {"default": false, "until": "lawyer consent wording"},
+  "remote_lift_lock":          {"default": false, "until": "never (DEC-020)"},
+  "reserve_bucket":            {"default": false, "until": "CA"}
+}

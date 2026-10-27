@@ -1,0 +1,132 @@
+## 13. Complete screen inventory
+
+### 13.1 Template inherited by every screen
+
+Every screen below inherits these defaults; the table lists only what is **specific** to the screen. A designer producing wireframes must apply all of them (MP§7.3 items 1–20):
+
+| Item | Default for all screens |
+|---|---|
+| Header | Title, language chip, speaker (repeat voice), role chip; back arrow |
+| Navigation | Five tabs (Today, Map, Chat, Money, Me); Admin/Owner add Analytics |
+| Next action | Exactly one primary action; ≤2 secondary; field screens ≤3 choices |
+| Loading | Skeleton matching layout; progress text after 2 s; never blank |
+| Empty | Illustration + one sentence + one action ("Nothing to do — next step is …") |
+| Success | Green check, spoken confirmation, Undo bar 10 s (except unlock, payment confirmation, SOS) |
+| Failure | Reason in plain language + retry + Help; never lose entered work (draft saved) |
+| Offline | Amber banner, "saved on phone, will send", queue count; actions that need server show *why* disabled |
+| Permission denied | Explains what is missing, shows how to enable, offers human help; blocked actions show padlock |
+| Audit/evidence | Every state-changing action writes the six facts (who, role, what, when, where, proof) |
+| Responsive | 360 px min; single column; tables become cards under 480 px |
+| Accessibility | Section 12 |
+| Required vs optional | Required fields marked with text "Required" (not colour); optional marked "Optional" |
+| Test | Linked tests in the traceability matrix |
+
+### 13.2 Screens (87)
+
+| Screen ID | Name | Role | Route | Primary action | Related requirement keys | Screen-specific states/notes |
+|---|---|---|---|---|---|---|
+| SCR-001 | Splash and install gate | ALL | `/start` | Install app (field roles) or Try demo | FORCE_INSTALL, DEMO, PWA_NATIVE | Android install prompt; iPhone picture guide; demo link always visible |
+| SCR-002 | Language choice | ALL | `/language` | Tap Marathi / Hindi / English | LANG3 | Voice line plays in each language on tap |
+| SCR-003 | Mobile OTP login | ALL | `/login` | Send OTP then enter code on number pad | ROLE_LOGIN, SEC_BASELINE | Rate-limited; invitation required for roles |
+| SCR-004 | Face or PIN unlock | ALL | `/unlock` | Look at camera or enter 4-digit PIN | ROLE_LOGIN, ACCOUNT_RECOVERY | Fallback to human-reviewed recovery |
+| SCR-005 | Permission wizard | ALL | `/permissions` | Allow one permission at a time with picture | PERM_WIZARD | Shows consequence of denying camera/location |
+| SCR-006 | Consent notice and records | ALL | `/consent` | Listen then accept or decline per purpose | CONSENT_REC, PRIVACY | Notice read aloud; withdrawal control |
+| SCR-007 | Role switcher | ALL | `/role` | Pick active role | ROLE_MULTI | Only roles assigned to the account |
+| SCR-008 | Today (Next-step card) | ALL | `/today` | Do the one next action | NEXT_CARD, FIVE_TABS, MANAGER_ASSISTANT | Content differs by role |
+| SCR-009 | Chat list | ALL | `/chat` | Open a project thread | CHAT | Only assigned projects |
+| SCR-010 | Project chat thread | ALL | `/chat/:projectId` | Send message / voice note / approval reply | CHAT, APPROVALS_INBOX | System events visually distinct |
+| SCR-011 | Money tab | ALL | `/money` | See role-specific money status | PAID_ON_PROOF, LEDGER_BUCKETS, CUSTOMER_VIEWS | Role-specific; no wallet wording |
+| SCR-012 | Me and Settings | ALL | `/me` | Change language, theme, scale, help | LANG3, THEMES, SCALE, SOUNDS | Scale clamp applied |
+| SCR-013 | Notification centre | ALL | `/notifications` | Open notification target | NOTIFY_OUTBOX | Delivery state shown |
+| SCR-014 | Offline and sync status | ALL | `/sync` | Retry sync now | OFFLINE_SYNC, OFFLINE_QUEUE | Shows queue, retries, last sync |
+| SCR-015 | Evidence camera | ALL | `/camera` | Capture 2-5 photos or 10 s video | CAMERA_ONLY, EVID_STAMP, VIDEO10 | Ghost outline; no gallery |
+| SCR-016 | Evidence review and submit | ALL | `/camera/review` | Submit or retake | EVID_CHECKS, AI_FAIRNESS, OFFLINE_SYNC | Shows AI reason picture and Ask human review |
+| SCR-017 | SOS | TEC,RID,QC | `/sos` | Call 112 / send alert | SOS | Always reachable; offline SMS route |
+| SCR-018 | Help and call-back | ALL | `/help` | Request chat or call-back | SCREEN_GRAMMAR | Red Help on every screen |
+| SCR-019 | Account recovery | ALL | `/recovery` | Start human-reviewed recovery | ACCOUNT_RECOVERY | Lost phone revokes sessions |
+| SCR-020 | Demo home | ALL | `/demo` | Explore sample role | DEMO | Isolated data |
+| SCR-021 | Rider start day | RID | `/rider/start` | Start day with selfie | RIDER_ROUTINE, RIDER_COVER | Tracking indicator on |
+| SCR-022 | Rider map | RID | `/rider/map` | Tap a pin or New lead | RIDER_MAP, SUGGEST_AREAS | Layers toggles |
+| SCR-023 | Stop-to-capture lead | RID | `/rider/capture` | Capture site, shaft, board | LEAD_CAPTURE, STOP_CAPTURE, AUTO_ADDRESS | Blocked while moving |
+| SCR-024 | Lead confirm and consent | RID | `/rider/lead/confirm` | Confirm number and record consent yes | OCR_NUMBER, LEAD_CONSENT | OCR proposes, rider confirms |
+| SCR-025 | Duplicate warning | RID | `/rider/lead/duplicate` | Attach as update or cancel | DUP_LEAD, GPS_DRIFT | Shows attribution rule in advance |
+| SCR-026 | Lead detail | RID,SAL | `/lead/:id` | View status and photos | LEAD_STATUS_VIEW, TAP_DETAIL | Contact masked |
+| SCR-027 | Rider earnings and leaderboard | RID | `/rider/money` | View commission and rank | COMMISSION, GAMIFY | Won-deal based board |
+| SCR-028 | Rider end day | RID | `/rider/end` | End day and see summary | RIDER_ROUTINE | Tracking stops |
+| SCR-029 | Sales lead map and queue | SAL | `/sales` | Open next lead | LEADS_TO_SALES, WA_OUTREACH | Sorted by distance and score |
+| SCR-030 | Outreach log | SAL | `/sales/:id/outreach` | Review WhatsApp/call result | WA_OUTREACH, AUTO_CALL, COLD_FOLLOWUP | Opt-out state shown |
+| SCR-031 | Requirement and quote builder | SAL | `/sales/:id/quote` | Confirm requirement and send quote | REQ_CAPTURE, AUTO_QUOTE, QUOTE_DISCLOSURE, RATE_CARD | Server floor check |
+| SCR-032 | Bot negotiation monitor | SAL,ADM | `/sales/:id/bot` | Take over chat | PRICE_LADDER, BOT_LIMITS, HANDOFF_TRIGGERS | Never shows floor to customer |
+| SCR-033 | Negotiator workspace | NEG | `/negotiator/:id` | Offer price down to floor | NEGOTIATOR, PRICE_LADDER | Full chat and history |
+| SCR-034 | Below-floor request | NEG,OWN | `/owner/floor/:id` | Approve or decline with reason | BELOW_FLOOR, OVERRIDE_LOUD | Second approval required |
+| SCR-035 | Quote and negotiation chat | CUS | `/c/quote` | Accept price or counter | CUSTOMER_VIEWS, QUOTE_DISCLOSURE | Price history only |
+| SCR-036 | Agreement read-aloud and sign | CUS | `/c/agreement` | Listen then e-sign | AGREEMENT, CUST_PARTIES | Authority proof upload |
+| SCR-037 | Payments and schedule | CUS | `/c/payments` | Pay milestone | PAY_SCHEDULE, ESCROW_GATE, PAY_METHODS, TOKEN | Status from provider only |
+| SCR-038 | EMI view | CUS,NBFC | `/c/emi` | View or apply EMI | EMI_NBFC | Status from NBFC only |
+| SCR-039 | Readiness checklist | CUS | `/c/readiness` | Upload readiness photos | READINESS_SOP | Reminders every 3 days |
+| SCR-040 | Drawings and technical details | CUS | `/c/drawings` | Open drawing | DRAWINGS_RELEASE | Locked until gate |
+| SCR-041 | Progress tracker | CUS | `/c/progress` | View stage photos | CUSTOMER_VIEWS | Pizza tracker 0-100% |
+| SCR-042 | Authorised representative | CUS | `/c/representative` | Name representative with proof | CUST_PARTIES, CUSTODY | Delegation proof stored |
+| SCR-043 | Container unlock approval | CUS,TEC,ADM | `/unlock/:containerId` | Approve unlock with face check | CONTAINER_LOCK, OFFLINE_CODE | Exempt from Undo |
+| SCR-044 | Material handover sign | CUS,TEC | `/handover/material` | Sign custody clause | CUSTODY, BOM, MATERIAL_CLAIM | Both parties present |
+| SCR-045 | Variation quote sign | CUS | `/c/variation` | Sign variation quote | VARIATION | Production blocked until signed |
+| SCR-046 | Final handover sign | CUS,TEC,QC | `/handover/final` | Three-party eSign and pay final 10% | HANDOVER_SIGN, NOC_DEF, LICENCE_GATE | Blocked without licence |
+| SCR-047 | Daily safety PDFs | CUS | `/c/safety` | Open daily log | SAFETY_PDF | Faces blurred copy |
+| SCR-048 | Complaint bot and tickets | CUS | `/c/service` | Report problem | SERVICE_TICKET, AMC_FLIP | Trapped goes to human |
+| SCR-049 | AMC progress | CUS | `/c/amc` | View AMC and renewals | AMC_FLIP, INSURANCE | Renewal reminders |
+| SCR-050 | Job offers | TEC | `/tech/offers` | Accept or decline offer | CONTRACTOR_CLASS, GAMIFY | Skill-matched |
+| SCR-051 | Site arrival and geofence | TEC | `/tech/arrive` | Check in at site | SAFETY_GATE, BG_TRACK | Basement tolerance |
+| SCR-052 | Daily safety gate | TEC | `/tech/safety` | Record scaffolding, barricade, earthing proof | SAFETY_GATE, SAFETY_CRITICAL | Tasks locked until certified |
+| SCR-053 | SOP step | TEC | `/tech/sop/:step` | Watch video then capture proof | SOP_VERSIONED, SUBSTAGES5, PAID_ON_PROOF | Picture-based |
+| SCR-054 | Peer check | TEC,QC | `/tech/peer` | 3-point check of previous stage | PEER_RELAY | Never same team |
+| SCR-055 | Extra material or defect | TEC | `/tech/extra` | Photo damaged part with serial | BOM, MATERIAL_CLAIM | Emergency human path |
+| SCR-056 | Pause request | TEC | `/tech/pause` | Request pause with proof | SITE_START_14D | Admin approves |
+| SCR-057 | Technician end day | TEC | `/tech/end` | End day and send safety PDF | SAFETY_PDF, OFFLINE_SYNC | Provisional earnings shown |
+| SCR-058 | Technician money | TEC | `/tech/money` | View ledger buckets | LEDGER_BUCKETS, PAYOUT_MODEL | Earned, paid, outstanding, disputed |
+| SCR-059 | QC visit list | QC | `/qc` | Open visit | SURPRISE_QC | Surprise visits revealed on day |
+| SCR-060 | Site clearance and measurements | QC | `/qc/clearance/:id` | Enter measurements and sign | QC_CLEARANCE, QC_REJECT_SITE | Numeric fields with units |
+| SCR-061 | Variation check | QC | `/qc/variation/:id` | Compare measured and quoted | VARIATION | 5% threshold |
+| SCR-062 | Final QC and surprise QC | QC | `/qc/final/:id` | Pass or fail with evidence | SURPRISE_QC, INSPECTOR_GATE, SAFETY_CRITICAL | Qualified signer check |
+| SCR-063 | Supplier orders | SUP | `/supplier` | Accept production order | SUPPLIER_PO, SUPPLIER_VIEW | Exact spec version |
+| SCR-064 | Packing and dispatch | SUP | `/supplier/dispatch/:id` | Upload packing photos and challan | DISPATCH_RULES, BOM | Blocked until payment gate |
+| SCR-065 | Supplier invoices | SUP | `/supplier/money` | View own invoice status | SUPPLIER_PAY, SUPPLIER_VIEW | Own invoices only |
+| SCR-066 | NBFC loan queue | NBFC | `/nbfc` | Approve or update loan status | EMI_NBFC | Consent-based data only |
+| SCR-067 | Coordinator assist | COO | `/coord/assist` | Assist worker step | ASSISTED, TECH_ABSENT | Records assisted-by |
+| SCR-068 | Review queue | COO | `/coord/review` | Resolve face/GPS/AI flag | GPS_DRIFT, AI_FAIRNESS, EVID_CHECKS | Response time limit |
+| SCR-069 | New worker page | APP | `/join` | Join and filter jobs | AGGREGATOR_PAGE | No login to view |
+| SCR-070 | Onboarding and KYC | APP | `/join/kyc` | Verify ID, bank, face | ONBOARD_ENGINE | Liveness |
+| SCR-071 | Training and quiz | APP | `/join/train` | Watch video and take picture quiz | TRAINING, ONBOARD_ENGINE | Three languages |
+| SCR-072 | Safety test and trial job | APP,TRAINEE | `/join/trial` | Complete safety test | ONBOARD_ENGINE, TRAINEE_RULES | Low-risk tasks only |
+| SCR-073 | Admin exceptions queue | ADM | `/admin` | Resolve top exception | ADMIN_QUEUE, DAY_CLOSE | Severity ordered |
+| SCR-074 | Admin live map | ADM | `/admin/map` | Filter and open Project file | ADMIN_MAP | Real data only |
+| SCR-075 | Project file detail | ADM | `/project/:id` | Review timeline | SINGLE_RECORD, SIDE_STATES, TAP_DETAIL | Overrides in red |
+| SCR-076 | Approvals inbox | ADM,OWN | `/admin/approvals` | Approve or reject | APPROVALS_INBOX, NO_SELF_APPROVE | Self-approval blocked |
+| SCR-077 | Payout batch | ADM,OWN | `/admin/payouts` | Approve batch | PAYOUT_CONTROLS, CONFIRMED_RULE | Second approver above limit |
+| SCR-078 | Ledger and reconciliation | ADM | `/admin/ledger` | Review mismatches | LEDGER, PAY_TRUTH | Provider confirmation shown |
+| SCR-079 | Rules and rate card | ADM,OWN | `/admin/rules` | Propose rule change | RATE_CARD, FULL_COST_BASE, VARIATION | Owner approves |
+| SCR-080 | Statutory tracker | ADM | `/admin/statutory` | Update permit or licence | PERMIT_TRACK, LICENCE_GATE, LICENCE_HOLDER | Expiry alerts |
+| SCR-081 | Worker management and appeals | ADM | `/admin/workers` | Decide appeal | APPEALS, DEMOTION, LADDER | Evidence and reason codes |
+| SCR-082 | Incident management | ADM,OWN | `/admin/incidents` | Close incident step | INCIDENT, SOS | Regulator/insurer tasks |
+| SCR-083 | Analytics | ADM,OWN | `/admin/analytics` | Drill into KPI | ANALYTICS, LEAD_METRICS, LEARNING_LOOP | Table alternative for charts |
+| SCR-084 | Owner summary | OWN | `/owner` | View business summary | OWNER_PAGE | Weekly summary |
+| SCR-085 | Owner decision queue | OWN | `/owner/decisions` | Decide item | OWNER_PAGE, BELOW_FLOOR | Delegate when away |
+| SCR-086 | Resident QR ticket | RES | `/q/:liftCode` | Report fault or Person trapped | QR_NO_PII, ENTRAPMENT, SERVICE_TICKET | No login; human rescue first |
+| SCR-087 | Rescue console | RES,ADM | `/rescue` | Acknowledge and dispatch | ENTRAPMENT, INCIDENT | 24x7 owner decision |
+
+### 13.3 Role-to-screen matrix
+
+| Role | Count | Screens (ALL-role screens included) |
+|---|---:|---|
+| Rider | 28 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-017, SCR-018, SCR-019, SCR-020, SCR-021, SCR-022, SCR-023, SCR-024, SCR-025, SCR-026, SCR-027, SCR-028 |
+| Sales / Sales bot | 24 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-026, SCR-029, SCR-030, SCR-031, SCR-032 |
+| Negotiator | 21 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-033, SCR-034 |
+| Customer / Builder | 34 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-035, SCR-036, SCR-037, SCR-038, SCR-039, SCR-040, SCR-041, SCR-042, SCR-043, SCR-044, SCR-045, SCR-046, SCR-047, SCR-048, SCR-049 |
+| Technician / Trainee | 32 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-017, SCR-018, SCR-019, SCR-020, SCR-043, SCR-044, SCR-046, SCR-050, SCR-051, SCR-052, SCR-053, SCR-054, SCR-055, SCR-056, SCR-057, SCR-058 |
+| QC Inspector | 26 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-017, SCR-018, SCR-019, SCR-020, SCR-046, SCR-054, SCR-059, SCR-060, SCR-061, SCR-062 |
+| Supplier | 22 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-063, SCR-064, SCR-065 |
+| NBFC partner | 21 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-038, SCR-066 |
+| Coordinator | 21 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-067, SCR-068 |
+| Admin | 33 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-032, SCR-043, SCR-073, SCR-074, SCR-075, SCR-076, SCR-077, SCR-078, SCR-079, SCR-080, SCR-081, SCR-082, SCR-083, SCR-087 |
+| Owner | 27 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-034, SCR-076, SCR-077, SCR-079, SCR-082, SCR-083, SCR-084, SCR-085 |
+| Applicant | 23 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-069, SCR-070, SCR-071, SCR-072 |
+| Resident / Rescue | 21 | SCR-001, SCR-002, SCR-003, SCR-004, SCR-005, SCR-006, SCR-007, SCR-008, SCR-009, SCR-010, SCR-011, SCR-012, SCR-013, SCR-014, SCR-015, SCR-016, SCR-018, SCR-019, SCR-020, SCR-086, SCR-087 |

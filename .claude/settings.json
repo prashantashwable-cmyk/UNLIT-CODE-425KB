@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/resume-brief.sh\"" } ] }
+    ],
+    "PreCompact": [
+      { "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/checkpoint.sh\" --force" } ] }
+    ],
+    "Stop": [
+      { "hooks": [
+        { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/autopilot-stop.sh\"" },
+        { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/checkpoint.sh\"" }
+      ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/checkpoint.sh\" --force" } ] }
+    ]
+  },
+  "permissions": {
+    "deny": ["Read(./.env)", "Read(./.env.*)"]
+  }
+}

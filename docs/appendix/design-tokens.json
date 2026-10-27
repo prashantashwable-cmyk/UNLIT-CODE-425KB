@@ -1,0 +1,139 @@
+{
+  "$comment": "PROPOSED tokens; brand assets not supplied (owner decision). Contrast of text pairs computed in section 11.1.",
+  "color": {
+    "light": {
+      "bg": "#F4F7FB",
+      "surface": "#FFFFFF",
+      "text": "#10202F",
+      "text2": "#44546A",
+      "primary": "#0B5CAD",
+      "onPrimary": "#FFFFFF",
+      "success": "#1B7A3A",
+      "warnBg": "#FFE9A8",
+      "warnText": "#4A3200",
+      "danger": "#B3261E",
+      "info": "#0B5CAD",
+      "border": "#6B7A8D"
+    },
+    "colour": {
+      "secondary": "#5B3E9B",
+      "accent": "#B93A0A",
+      "onSecondary": "#FFFFFF",
+      "onAccent": "#FFFFFF"
+    },
+    "outdoor": {
+      "bg": "#FFFFFF",
+      "text": "#000000",
+      "primary": "#003F7F",
+      "onPrimary": "#FFFFFF",
+      "success": "#006B2D",
+      "warnBg": "#FFD23F",
+      "warnText": "#000000",
+      "danger": "#A00000",
+      "border": "#000000",
+      "borderWidthPx": 2
+    },
+    "dark": {
+      "bg": "#0F1720",
+      "surface": "#18232F",
+      "text": "#E8EDF3",
+      "text2": "#AEBBCB",
+      "accent": "#E3B94F",
+      "success": "#4CC27A",
+      "danger": "#FF8A80"
+    }
+  },
+  "semantic": {
+    "do": "green",
+    "waiting": "yellow",
+    "stopped": "red",
+    "info": "blue",
+    "rule": "never colour alone: icon + text + voice"
+  },
+  "space": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "radius": {
+    "input": 8,
+    "chip": 12,
+    "card": 16,
+    "sheet": 24,
+    "pill": 999
+  },
+  "elevationDp": [
+    0,
+    1,
+    2,
+    4
+  ],
+  "type": {
+    "fontEn": "Noto Sans",
+    "fontDevanagari": "Noto Sans Devanagari",
+    "scaleSp": {
+      "display": [
+        28,
+        36
+      ],
+      "h1": [
+        24,
+        32
+      ],
+      "h2": [
+        20,
+        28
+      ],
+      "body": [
+        16,
+        24
+      ],
+      "label": [
+        14,
+        20
+      ],
+      "caption": [
+        12,
+        16
+      ],
+      "money": [
+        32,
+        40
+      ]
+    },
+    "devanagariLineHeightMin": 1.5
+  },
+  "grid": {
+    "columns": {
+      "360": 4,
+      "600": 8,
+      "840": 12
+    },
+    "gutter": 16
+  },
+  "target": {
+    "fieldMinDp": 48,
+    "primaryDp": 56,
+    "officeMinDp": 44,
+    "wcagMinCssPx": 24,
+    "primaryButtonMinHeightPercentOnSingleActionFieldScreens": 30
+  },
+  "motionMs": {
+    "feedback": 120,
+    "transition": 200,
+    "sheet": 300,
+    "easing": "ease-out",
+    "reducedMotion": "fade or none"
+  },
+  "scale": {
+    "sliderPercent": [
+      20,
+      130
+    ],
+    "clamp": "critical controls keep target.* and the 30% height rule"
+  }
+}

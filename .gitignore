@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+node_modules/
+build/
+.DS_Store
+.claude/.last-checkpoint
+.claude/.autopilot-count
+.claude/autopilot
+.claude/auto-resume.log
+web/dist/
+web/screenshots/
+web/test-results/
+web/dist-single/

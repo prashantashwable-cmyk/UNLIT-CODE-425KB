@@ -1,0 +1,313 @@
+{
+ "_status": "DRAFT machine translations; native-speaker review required; safety_related strings also need lift-safety review",
+ "strings": [
+  {
+   "key": "rider.stop_to_capture",
+   "en": "Stop safely to capture",
+   "mr": "सुरक्षितपणे थांबा, मग फोटो घ्या",
+   "hi": "सुरक्षित रूप से रुकें, फिर फोटो लें",
+   "safety_related": true
+  },
+  {
+   "key": "rider.photo_dark",
+   "en": "Photo too dark. Use the torch",
+   "mr": "फोटो अंधारा आहे. टॉर्च वापरा",
+   "hi": "फोटो अंधेरा है। टॉर्च का उपयोग करें",
+   "safety_related": false
+  },
+  {
+   "key": "rider.number_check",
+   "en": "Check the number",
+   "mr": "क्रमांक तपासा",
+   "hi": "नंबर जांचें",
+   "safety_related": false
+  },
+  {
+   "key": "rider.consent_short",
+   "en": "Recording too short. Record again",
+   "mr": "रेकॉर्डिंग खूप लहान आहे. पुन्हा करा",
+   "hi": "रिकॉर्डिंग बहुत छोटी है। फिर से करें",
+   "safety_related": false
+  },
+  {
+   "key": "rider.dup_found",
+   "en": "This site already exists",
+   "mr": "ही साइट आधीच आहे",
+   "hi": "यह साइट पहले से मौजूद है",
+   "safety_related": false
+  },
+  {
+   "key": "rider.no_new_info",
+   "en": "No new information, so no commission share",
+   "mr": "नवीन माहिती नाही, म्हणून कमिशन वाटा नाही",
+   "hi": "कोई नई जानकारी नहीं, इसलिए कमीशन का हिस्सा नहीं",
+   "safety_related": false
+  },
+  {
+   "key": "rider.saved_phone",
+   "en": "Saved on phone. Will send when network returns",
+   "mr": "फोनमध्ये सेव्ह झाले. नेटवर्क आल्यावर पाठवले जाईल",
+   "hi": "फोन में सेव हो गया। नेटवर्क आने पर भेज दिया जाएगा",
+   "safety_related": false
+  },
+  {
+   "key": "rider.face_fail",
+   "en": "We could not match your face. Ask your Coordinator",
+   "mr": "चेहरा जुळला नाही. समन्वयकाला विचारा",
+   "hi": "चेहरा मेल नहीं खाया। अपने समन्वयक से पूछें",
+   "safety_related": false
+  },
+  {
+   "key": "tech.work_locked",
+   "en": "Work locked until safety is approved",
+   "mr": "सुरक्षा मंजूर होईपर्यंत काम बंद आहे",
+   "hi": "सुरक्षा मंज़ूर होने तक काम बंद है",
+   "safety_related": true
+  },
+  {
+   "key": "tech.show_ppe",
+   "en": "Show helmet and harness clearly",
+   "mr": "हेल्मेट आणि हार्नेस स्पष्ट दाखवा",
+   "hi": "हेलमेट और हार्नेस साफ़ दिखाएँ",
+   "safety_related": false
+  },
+  {
+   "key": "tech.wait_qc",
+   "en": "Waiting for QC approval",
+   "mr": "QC मंजुरीची वाट पाहत आहे",
+   "hi": "QC की मंज़ूरी का इंतज़ार है",
+   "safety_related": false
+  },
+  {
+   "key": "tech.not_own_work",
+   "en": "Not allowed: this is your own work",
+   "mr": "परवानगी नाही: हे तुमचे स्वतःचे काम आहे",
+   "hi": "अनुमति नहीं: यह आपका अपना काम है",
+   "safety_related": false
+  },
+  {
+   "key": "tech.ai_ask_human",
+   "en": "Ask a person to check this",
+   "mr": "हे तपासण्यासाठी माणसाला सांगा",
+   "hi": "इसे जांचने के लिए किसी व्यक्ति से कहें",
+   "safety_related": false
+  },
+  {
+   "key": "tech.rules_later",
+   "en": "Payout rules to be announced",
+   "mr": "पेमेंटचे नियम लवकरच जाहीर होतील",
+   "hi": "भुगतान के नियम जल्द बताए जाएंगे",
+   "safety_related": false
+  },
+  {
+   "key": "tech.hazard_frozen",
+   "en": "Hazard reported. All work stopped",
+   "mr": "धोका नोंदवला. सर्व काम थांबले",
+   "hi": "खतरा दर्ज हुआ। सारा काम रुक गया है",
+   "safety_related": true
+  },
+  {
+   "key": "cust.quote_expired",
+   "en": "This quote has ended. Ask for a new quote",
+   "mr": "ही किंमत संपली आहे. नवीन किंमत मागवा",
+   "hi": "यह कीमत समाप्त हो गई है। नई कीमत मांगें",
+   "safety_related": false
+  },
+  {
+   "key": "cust.sign_listen",
+   "en": "Listen to the agreement or confirm you read it",
+   "mr": "करार ऐका किंवा वाचला असे सांगा",
+   "hi": "समझौता सुनें या बताएँ कि आपने पढ़ लिया है",
+   "safety_related": false
+  },
+  {
+   "key": "cust.need_authority",
+   "en": "We need proof that you can sign for this company",
+   "mr": "तुम्ही या कंपनीसाठी सही करू शकता याचा पुरावा हवा",
+   "hi": "हमें प्रमाण चाहिए कि आप इस कंपनी के लिए हस्ताक्षर कर सकते हैं",
+   "safety_related": false
+  },
+  {
+   "key": "cust.wait_bank",
+   "en": "Still waiting for the bank. We will tell you",
+   "mr": "बँकेची वाट पाहत आहोत. आम्ही कळवू",
+   "hi": "बैंक का इंतज़ार है। हम आपको बताएँगे",
+   "safety_related": false
+  },
+  {
+   "key": "cust.not_paid_locked",
+   "en": "Payment not confirmed. Container will not open",
+   "mr": "पेमेंट पक्के झाले नाही. कंटेनर उघडणार नाही",
+   "hi": "भुगतान पक्का नहीं हुआ। कंटेनर नहीं खुलेगा",
+   "safety_related": true
+  },
+  {
+   "key": "cust.wait_licence",
+   "en": "Waiting for licence",
+   "mr": "परवान्याची वाट पाहत आहे",
+   "hi": "लाइसेंस का इंतज़ार है",
+   "safety_related": false
+  },
+  {
+   "key": "shared.otp_wrong",
+   "en": "Wrong code. Try again",
+   "mr": "चुकीचा कोड. पुन्हा प्रयत्न करा",
+   "hi": "गलत कोड। फिर कोशिश करें",
+   "safety_related": false
+  },
+  {
+   "key": "shared.otp_expired",
+   "en": "Code ended. Send a new code",
+   "mr": "कोड संपला. नवीन कोड पाठवा",
+   "hi": "कोड समाप्त हो गया। नया कोड भेजें",
+   "safety_related": false
+  },
+  {
+   "key": "shared.not_invited",
+   "en": "Ask your Coordinator to invite you",
+   "mr": "समन्वयकाला तुम्हाला आमंत्रित करायला सांगा",
+   "hi": "अपने समन्वयक से आमंत्रण मांगें",
+   "safety_related": false
+  },
+  {
+   "key": "shared.update_app",
+   "en": "Update the app",
+   "mr": "अ‍ॅप अपडेट करा",
+   "hi": "ऐप अपडेट करें",
+   "safety_related": false
+  },
+  {
+   "key": "shared.connect_once",
+   "en": "Connect once to start",
+   "mr": "सुरू करण्यासाठी एकदा इंटरनेट जोडा",
+   "hi": "शुरू करने के लिए एक बार इंटरनेट जोड़ें",
+   "safety_related": false
+  },
+  {
+   "key": "shared.nothing_now",
+   "en": "Nothing to do now",
+   "mr": "आत्ता काही करायचे नाही",
+   "hi": "अभी कुछ करने को नहीं है",
+   "safety_related": false
+  },
+  {
+   "key": "shared.help",
+   "en": "Help",
+   "mr": "मदत",
+   "hi": "मदद",
+   "safety_related": false
+  },
+  {
+   "key": "shared.call_other_phone",
+   "en": "Call from another phone",
+   "mr": "दुसऱ्या फोनवरून कॉल करा",
+   "hi": "दूसरे फोन से कॉल करें",
+   "safety_related": false
+  },
+  {
+   "key": "sales.no_permission",
+   "en": "No permission to message this number",
+   "mr": "या क्रमांकावर संदेश पाठवण्याची परवानगी नाही",
+   "hi": "इस नंबर पर संदेश भेजने की अनुमति नहीं है",
+   "safety_related": false
+  },
+  {
+   "key": "sales.lowest_offer",
+   "en": "Lowest you can offer is {amount}",
+   "mr": "तुम्ही देऊ शकता ती सर्वात कमी किंमत {amount} आहे",
+   "hi": "आप जो सबसे कम कीमत दे सकते हैं वह {amount} है",
+   "safety_related": false
+  },
+  {
+   "key": "sales.rate_card_ended",
+   "en": "Rate card has ended. Ask Admin",
+   "mr": "दरपत्रक संपले आहे. प्रशासकाला विचारा",
+   "hi": "दर सूची समाप्त हो गई है। एडमिन से पूछें",
+   "safety_related": false
+  },
+  {
+   "key": "sales.service_down",
+   "en": "Message service is down. A task was created",
+   "mr": "संदेश सेवा बंद आहे. काम नोंदवले आहे",
+   "hi": "संदेश सेवा बंद है। एक कार्य बनाया गया है",
+   "safety_related": false
+  },
+  {
+   "key": "qc.out_of_tolerance",
+   "en": "Out of tolerance",
+   "mr": "मर्यादेबाहेर",
+   "hi": "सीमा से बाहर",
+   "safety_related": false
+  },
+  {
+   "key": "qc.cannot_inspect",
+   "en": "You cannot inspect this job",
+   "mr": "तुम्ही हे काम तपासू शकत नाही",
+   "hi": "आप इस काम की जांच नहीं कर सकते",
+   "safety_related": false
+  },
+  {
+   "key": "qc.variation_required",
+   "en": "Variation required: {yesno}",
+   "mr": "बदल आवश्यक: {yesno}",
+   "hi": "बदलाव आवश्यक: {yesno}",
+   "safety_related": false
+  },
+  {
+   "key": "admin.all_clear",
+   "en": "All clear. Nothing needs you",
+   "mr": "सर्व ठीक आहे. तुमच्यासाठी काही नाही",
+   "hi": "सब ठीक है। आपके लिए कुछ नहीं",
+   "safety_related": false
+  },
+  {
+   "key": "supplier.wait_payment",
+   "en": "Waiting for customer payment. Do not dispatch",
+   "mr": "ग्राहकाच्या पेमेंटची वाट पाहत आहे. पाठवू नका",
+   "hi": "ग्राहक के भुगतान का इंतज़ार है। न भेजें",
+   "safety_related": false
+  },
+  {
+   "key": "coord.assisting",
+   "en": "Assisting {name}",
+   "mr": "{name} ला मदत करत आहे",
+   "hi": "{name} की मदद कर रहे हैं",
+   "safety_related": false
+  },
+  {
+   "key": "onb.real_earnings_later",
+   "en": "We will show real earnings after our first jobs",
+   "mr": "आमच्या पहिल्या कामांनंतर खरी कमाई दाखवू",
+   "hi": "हमारे पहले कामों के बाद असली कमाई दिखाएंगे",
+   "safety_related": false
+  },
+  {
+   "key": "rescue.in_danger",
+   "en": "In danger, call 112",
+   "mr": "धोका असेल तर 112 वर कॉल करा",
+   "hi": "खतरे में हों तो 112 पर कॉल करें",
+   "safety_related": true
+  },
+  {
+   "key": "rescue.keep_calling",
+   "en": "Keep calling 112",
+   "mr": "112 वर कॉल करत रहा",
+   "hi": "112 पर कॉल करते रहें",
+   "safety_related": true
+  },
+  {
+   "key": "rescue.person_trapped",
+   "en": "PERSON TRAPPED",
+   "mr": "व्यक्ती अडकली आहे",
+   "hi": "व्यक्ति फंसी है",
+   "safety_related": true
+  },
+  {
+   "key": "rescue.report_problem",
+   "en": "REPORT A PROBLEM",
+   "mr": "समस्या कळवा",
+   "hi": "समस्या बताएँ",
+   "safety_related": false
+  }
+ ]
+}

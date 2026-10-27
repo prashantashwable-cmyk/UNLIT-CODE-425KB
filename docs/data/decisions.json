@@ -1,0 +1,234 @@
+[
+ {
+  "id": "AIEC-DEC-012",
+  "tier": "1. Before the build starts",
+  "question": "Will the field app (Rider, Technician, QC) be Android-only at launch, and which framework?",
+  "default_until_answered": "Native Android for field roles, web for others; framework chosen by the builder before Phase 1",
+  "answer": {
+   "text": "Native Kotlin (Jetpack Compose) for Rider/Technician/QC, Android-only at launch; web (TypeScript + React) for other roles; Supabase-hosted PostgreSQL+PostGIS; TypeScript server. Per docs/adr/0001-stack.md",
+   "by": "Owner",
+   "date": "2026-10-27"
+  }
+ },
+ {
+  "id": "AIEC-DEC-014",
+  "tier": "1. Before the build starts",
+  "question": "What is in release 1, and is the pilot Pune only?",
+  "default_until_answered": "Phases in section 39; Pune pilot",
+  "answer": {
+   "text": "Phases as in section 39; Pune-only pilot",
+   "by": "Owner",
+   "date": "2026-10-27"
+  }
+ },
+ {
+  "id": "AIEC-DEC-005",
+  "tier": "1. Before the build starts",
+  "question": "Who holds the lift contractor licence on each job: AIEC, a partner contractor, or the owner?",
+  "default_until_answered": "The app stores the licence holder per project; a job cannot reach the permit stage without one named",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-016",
+  "tier": "1. Before the build starts",
+  "question": "Are workers independent contractors, and has a labour lawyer approved the contract terms?",
+  "default_until_answered": "Live contractor onboarding stays off until a legal review is recorded; demo mode works",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-017",
+  "tier": "1. Before the build starts",
+  "question": "Confirm: no stored-value wallet, only an earnings ledger and an authorised payout partner?",
+  "default_until_answered": "Ledger only (no wallet)",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-027",
+  "tier": "1. Before the build starts",
+  "question": "Who are the two approvers, and who is the named backup approver?",
+  "default_until_answered": "Approval features cannot go live until two named approvers and a backup exist",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-031",
+  "tier": "1. Before the build starts",
+  "question": "Who will check the status of the 2026 Amendment and the current Rules at go-live?",
+  "default_until_answered": "Authority names and forms are configuration, nothing is hardcoded",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-001",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "How are workers paid: 10% a week, 70% now plus 30% bond, or all confirmed earnings weekly?",
+  "default_until_answered": "Payout batch disabled; the ledger only records earnings",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-002",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "May any part of earned pay be held back (reserve or bond)?",
+  "default_until_answered": "No reserve; reserve bucket exists but is switched off",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-003",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "Is the Rs 10,000 token part of the 70% or extra, and when is it refunded?",
+  "default_until_answered": "Credited to the 70% (V3 draft), pending the CA",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-004",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "Must the customer's 70% be confirmed before dispatch or at delivery?",
+  "default_until_answered": "Before dispatch (V3), pending written provider and NBFC confirmation",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-008",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "What is the minimum price: markup or margin, on which cost base?",
+  "default_until_answered": "Floor of 1.20 on the fully loaded base; both markup and margin shown internally",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-018",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "Does customer satisfaction affect worker base pay?",
+  "default_until_answered": "No: rating affects bonus and promotion only",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-019",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "Is the 20% cabin payment due before production or at delivery?",
+  "default_until_answered": "Before production (V3)",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-023",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "Penalty points only, with no cash fines?",
+  "default_until_answered": "Points only",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-030",
+  "tier": "2. Before money features (Phase 2)",
+  "question": "Should the 1-2% gig-worker contribution be priced in now?",
+  "default_until_answered": "A placeholder cost line; no engine",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-007",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "What is the duplicate-lead window and the second rider's share?",
+  "default_until_answered": "60 days and 10% of the main commission, only if the update adds something new",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-009",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "At what difference does a variation quote become mandatory?",
+  "default_until_answered": "5% on the full-cost baseline",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-015",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "What does NOC legally mean, and can it be withheld?",
+  "default_until_answered": "NOC cannot be issued or used as a lever until defined",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-024",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "Keep the 20% to 130% scale slider with minimum control sizes?",
+  "default_until_answered": "Slider kept; critical controls clamped",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-025",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "Are automatic marketing calls allowed only with consent, DLT registration and a DND check?",
+  "default_until_answered": "Permission-based only",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-026",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "Are calls recorded?",
+  "default_until_answered": "Chat first; no recording until provider, notice and retention are approved",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-028",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "What does a rider earn per verified lead and per won deal?",
+  "default_until_answered": "Earnings screen shows Amount not set yet",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-029",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "Is technician pay per lift or per sub-stage, by level?",
+  "default_until_answered": "Job offers cannot show a rate until set",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-032",
+  "tier": "3. Before sales, quotes and rider features (Phases 3 to 5)",
+  "question": "Keep the career ladder and the Bronze to Platinum reward tiers separate?",
+  "default_until_answered": "Kept separate",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-006",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "Who pays supplier advances, freight, returns and damaged material?",
+  "default_until_answered": "No advance; claims are recorded; return costs unassigned",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-010",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "Who must approve safety-critical checks: QC only, or also a peer team?",
+  "default_until_answered": "QC for safety-critical items, peer team for others",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-011",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "Who staffs 24x7 rescue, and what response can you promise?",
+  "default_until_answered": "The trapped-person page is not published and no response time is stated",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-013",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "Confirm the order: inspection, licence, handover, final payment?",
+  "default_until_answered": "V3 order; handover blocked without licence",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-020",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "Confirm no remote lift lock in release 1?",
+  "default_until_answered": "Excluded",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-021",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "How is safety consent proved on site?",
+  "default_until_answered": "Video plus photo certified by a competent person; tick-only rejected",
+  "answer": null
+ },
+ {
+  "id": "AIEC-DEC-022",
+  "tier": "4. Before installation and field safety (Phases 6 to 8)",
+  "question": "When does the 14-day clock start, and is 14 days right?",
+  "default_until_answered": "From site start with paused days excluded, pending the lift engineer",
+  "answer": null
+ }
+]

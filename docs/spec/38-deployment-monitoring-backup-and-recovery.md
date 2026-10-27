@@ -1,0 +1,3 @@
+## 38. Deployment, monitoring, backup and recovery
+
+Environments: dev, staging, demo (isolated), production with separate secrets. CI: lint, unit, API, RLS policy tests, dependency scan. Monitoring: error tracking, job-queue depth, webhook failures, reconciliation mismatches, device-silent-30-min alerts, notification delivery. Backups: automated, encrypted, restore drilled before go-live; retention per section 29.4. Disaster recovery: documented RPO/RTO (owner sets), runbooks for provider outage, data breach, lost evidence. **Do not label the system production-ready** until integrations, security review, field testing, recovery tests and professional approvals are completed (NO_PROD_CLAIM).
