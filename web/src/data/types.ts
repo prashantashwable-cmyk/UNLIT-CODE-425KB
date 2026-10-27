@@ -184,6 +184,20 @@ export interface AppNotification {
   acknowledgedAt: string | null;
 }
 
+/** A person must phone because no channel reached a critical notification (§33). */
+export interface CallTask {
+  id: string;
+  notificationId: string;
+  recipientName: string;
+  recipientRole: Role;
+  phoneMasked: string;
+  textKey: string;
+  vars?: Record<string, string | number>;
+  at: string;
+  status: 'open' | 'done';
+  attempts: { at: string; byName: string; outcome: 'reached' | 'no_answer'; note: string | null }[];
+}
+
 export interface NotificationAuditRow {
   id: string;
   userName: string;
@@ -260,4 +274,6 @@ export interface Api {
   /** hides it from the list; the audit keeps it. Critical items must be acknowledged first. */
   deleteNotification(user: User, role: Role, id: string): Promise<void>;
   notificationAudit(user: User, role: Role): Promise<NotificationAuditRow[]>;
+  listCallTasks(user: User, role: Role): Promise<CallTask[]>;
+  logCallAttempt(user: User, role: Role, id: string, outcome: 'reached' | 'no_answer', note: string): Promise<CallTask>;
 }

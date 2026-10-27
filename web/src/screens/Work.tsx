@@ -34,6 +34,7 @@ export function AdminScreen() {
         <div className="row-wrap">
           {data.xs[0] && <SpeakButton text={`${t(`severity.${data.xs[0].severity}`)}. ${t(data.xs[0].kindKey)}`} />}
           <Link className="btn btn-secondary" to="/admin/approvals">{t('admin.approvals_title')}</Link>
+          <Link className="btn btn-secondary" to="/admin/follow-up">{t('calls.title')}</Link>
         </div>
       </div>
       {data.xs.length === 0 && <Notice>{t('admin.all_clear')}</Notice>}

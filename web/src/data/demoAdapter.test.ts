@@ -291,6 +291,7 @@ describe('notification centre (SCR-013, NOTIFY_OUTBOX; T-256)', () => {
     await a.deleteNotification(rahul, 'admin', crit.id);
     expect((await a.listNotifications(rahul, 'admin')).some((n) => n.id === crit.id)).toBe(false);
     const audit = await a.notificationAudit(rahul, 'admin');
+    expect([...audit].sort((x, y) => y.at.localeCompare(x.at)).map((r) => r.id)).toEqual(audit.map((r) => r.id));
     expect(audit.find((r) => r.id === crit.id)).toMatchObject({ userName: 'Rahul Deshmukh', priority: 'critical' });
     expect(audit.find((r) => r.id === crit.id)!.deletedAt).not.toBeNull();
     expect(audit.find((r) => r.id === crit.id)!.acknowledgedAt).not.toBeNull();
@@ -328,5 +329,39 @@ describe('notification centre (SCR-013, NOTIFY_OUTBOX; T-256)', () => {
     expect(rules.find((r) => r.key === 'quiet_hours_start')!.source).toMatch(/placeholder/i);
     expect(await code(a.proposeRule(asha, 'admin', 'quiet_hours_start', 21.5, 'half past'))).toBe('VALUE_OUT_OF_RANGE');
     expect(await code(a.proposeRule(asha, 'admin', 'duplicate_window_days', 30.5, 'half day'))).toBe('VALUE_OUT_OF_RANGE');
+  });
+});
+
+describe('call tasks for undelivered critical notifications (§33 "critical items: a human task"; T-086 follow-up)', () => {
+  it('each critical item nobody received becomes an open call task for the Admin team', async () => {
+    const a = createDemoApi();
+    const rahul = await a.login('9800000002', '123456');
+    const tasks = await a.listCallTasks(rahul, 'admin');
+    expect(tasks.map((x) => x.recipientName).sort()).toEqual(['Rahul Deshmukh', 'Vikram Joshi']);
+    expect(tasks.every((x) => x.status === 'open' && x.textKey === 'notif.override_needed')).toBe(true);
+    expect(tasks[0].phoneMasked).toMatch(/••/);                       // masked, never the full number
+    const vikram = await a.login('9800000009', '123456');
+    expect(await code(a.listCallTasks(vikram, 'owner'))).toBe('ROLE_NOT_ALLOWED');
+    const meera = await a.login('9800000021', '123456');
+    expect(await code(a.listCallTasks(meera, 'customer'))).toBe('ROLE_NOT_ALLOWED');
+  });
+
+  it('no answer keeps it open with the attempt logged; reached closes it; nobody closes the call to themselves', async () => {
+    const a = createDemoApi();
+    const rahul = await a.login('9800000002', '123456');
+    const asha = await a.login('9800000001', '123456');
+    const tasks = await a.listCallTasks(rahul, 'admin');
+    const own = tasks.find((x) => x.recipientName === 'Rahul Deshmukh')!;
+    const vik = tasks.find((x) => x.recipientName === 'Vikram Joshi')!;
+    expect(await code(a.logCallAttempt(rahul, 'admin', own.id, 'reached', ''))).toBe('OWN_TASK');
+    const t1 = await a.logCallAttempt(rahul, 'admin', vik.id, 'no_answer', '');
+    expect(t1).toMatchObject({ status: 'open' });
+    expect(t1.attempts).toEqual([expect.objectContaining({ byName: 'Rahul Deshmukh', outcome: 'no_answer' })]);
+    const t2 = await a.logCallAttempt(asha, 'admin', vik.id, 'reached', 'Told him about PUN-0006');
+    expect(t2).toMatchObject({ status: 'done' });
+    expect(t2.attempts).toHaveLength(2);
+    expect(await code(a.logCallAttempt(asha, 'admin', vik.id, 'reached', ''))).toBe('TASK_DONE');
+    await a.logCallAttempt(asha, 'admin', own.id, 'reached', '');
+    expect((await a.listCallTasks(asha, 'admin')).every((x) => x.status === 'done')).toBe(true);
   });
 });

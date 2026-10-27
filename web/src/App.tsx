@@ -5,6 +5,7 @@ import { DemoScreen, LanguageScreen, LoginScreen, RoleScreen, StartScreen } from
 import { AdminScreen, ApprovalsScreen, ProjectScreen } from './screens/Work';
 import { ChatListScreen, ChatThreadScreen, MapScreen, MoneyScreen } from './screens/Talk';
 import { RulesScreen } from './screens/Rules';
+import { FollowUpScreen } from './screens/FollowUp';
 import { NotificationsScreen } from './screens/Notifications';
 import { HelpScreen, RecoveryScreen } from './screens/Support';
 import { CustomerProgressScreen, MeScreen, OwnerScreen } from './screens/Views';
@@ -44,6 +45,7 @@ export function App() {
       <Route path="/chat/:projectId" element={<Guard><ChatThreadScreen /></Guard>} />
       <Route path="/money" element={<Guard><MoneyScreen /></Guard>} />
       <Route path="/notifications" element={<Guard><NotificationsScreen /></Guard>} />
+      <Route path="/admin/follow-up" element={<Guard roles={['admin']}><FollowUpScreen /></Guard>} />
       <Route path="/demo" element={<DemoScreen />} />
       <Route path="/help" element={<HelpScreen />} />
       <Route path="/recovery" element={<RecoveryScreen />} />

@@ -80,6 +80,7 @@ for (const lang of ['mr', 'hi', 'en']) {
       ['07b-analytics', null, nav(5)],
       ['07c-rules', null, async (p) => { await nav(4)(p); await p.locator('a[href="/admin/rules"]').click(); }],
       ['07d-notifications', null, async (p) => p.locator('a.bell').click()],
+      ['07e-follow-up', null, async (p) => { await nav(0)(p); await p.locator('a[href="/admin/follow-up"]').click(); }],
     ]);
   }
   await session(lang, mobile, '9800000021', null, [['08-customer-progress', null, null], ['08b-customer-money', null, nav(3)],

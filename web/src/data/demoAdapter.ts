@@ -5,7 +5,7 @@ import flagDefaults from '../../../config/flags.defaults.json';
 import { deliver, planDelivery, type Attempt, type EventClass, type Priority, type QuietHours } from './notify';
 import { STAGES, type Stage } from './stages';
 import {
-  ApiError, type Api, type AppNotification, type Approval, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
+  ApiError, type Api, type AppNotification, type Approval, type CallTask, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
   type FeatureFlag, type HelpRequest, type Project, type RecoveryRequest, type Role, type RuleProposal, type RuleSetting,
   type TimelineEvent, type User,
 } from './types';
@@ -17,6 +17,13 @@ const PILOT_TZ_OFFSET_MIN = 330;
 const noProvider: Attempt = () => 'not_connected';
 
 type StoredNotification = AppNotification & { userId: string; role: Role; deletedAt: string | null; sent: boolean };
+type StoredCallTask = CallTask & { userId: string };
+
+function callTaskFor(n: StoredNotification, id: string, at: string): StoredCallTask {
+  const u = users.find((x) => x.id === n.userId)!;
+  return { id, userId: n.userId, notificationId: n.id, recipientName: u.name, recipientRole: n.role, phoneMasked: u.phoneMasked,
+           textKey: n.textKey, vars: n.vars, at, status: 'open', attempts: [] };
+}
 
 const users: User[] = [
   { id: 'u-admin', name: 'Asha Kulkarni', phoneMasked: '+91 98•• ••01', roles: ['admin', 'owner'] },
@@ -117,12 +124,16 @@ function seed() {
     rule('quiet_hours_end', 7, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
   ];
   const notifications: StoredNotification[] = [];
+  const callTasks: StoredCallTask[] = [];
   const notify = (id: string, userId: string, role: Role, cls: EventClass, priority: Priority, at: string, textKey: string,
                   target: string, vars?: Record<string, string | number>) => {
     const plan = planDelivery(cls, priority, new Date(at), quietHours(rules));
     const out = deliver(plan, noProvider, at);
-    notifications.push({ id, userId, role, cls, priority: plan.priority, at, textKey, vars, target, heldUntil: plan.deferredUntil,
-                         receipts: out.receipts, humanTask: out.humanTask, acknowledgedAt: null, deletedAt: null, sent: !plan.deferredUntil });
+    const n: StoredNotification = { id, userId, role, cls, priority: plan.priority, at, textKey, vars, target,
+      heldUntil: plan.deferredUntil, receipts: out.receipts, humanTask: out.humanTask, acknowledgedAt: null, deletedAt: null,
+      sent: !plan.deferredUntil };
+    notifications.push(n);
+    if (out.humanTask) callTasks.push(callTaskFor(n, `ct${callTasks.length + 1}`, at));
   };
   // Approvers other than the requester (Asha asked for a2, so she is not told to decide it).
   notify('n1', 'u-admin2', 'admin', 'approval', 'critical', '2026-10-27T04:10:00.000Z', 'notif.override_needed', '/admin/approvals', { code: 'PUN-0006' });
@@ -139,12 +150,16 @@ function seed() {
   const proposals: RuleProposal[] = [];
   const help: HelpRequest[] = [];
   const recoveries: (RecoveryRequest & { userId: string | null; reviewerIds: string[] })[] = [];
-  return { projects, approvals, timelines, payments, messages, rules, proposals, help, recoveries, notifications };
+  return { projects, approvals, timelines, payments, messages, rules, proposals, help, recoveries, notifications, callTasks };
 }
 
 function quietHours(rules: RuleSetting[]): QuietHours {
   const v = (key: string) => rules.find((r) => r.key === key)!.value;
   return { startHour: v('quiet_hours_start'), endHour: v('quiet_hours_end'), tzOffsetMinutes: PILOT_TZ_OFFSET_MIN };
+}
+
+function publicCallTask({ userId: _u, ...rest }: StoredCallTask): CallTask {
+  return { ...rest, attempts: rest.attempts.map((x) => ({ ...x })) };
 }
 
 const WHOLE_UNITS: readonly RuleSetting['unit'][] = ['days', 'count', 'hour'];
@@ -407,6 +422,7 @@ export function createDemoApi(): Api {
           n.receipts = out.receipts;
           n.humanTask = out.humanTask;
           n.sent = true;
+          if (out.humanTask) db.callTasks.push(callTaskFor(n, `ct${db.callTasks.length + 1}`, n.heldUntil));
         }
       }
       return mine.sort((x, y) => y.at.localeCompare(x.at))
@@ -429,7 +445,25 @@ export function createDemoApi(): Api {
       hold(user, role);
       if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
       return db.notifications.map((n) => ({ id: n.id, userName: users.find((u) => u.id === n.userId)!.name, role: n.role, cls: n.cls,
-        priority: n.priority, at: n.at, acknowledgedAt: n.acknowledgedAt, deletedAt: n.deletedAt }));
+        priority: n.priority, at: n.at, acknowledgedAt: n.acknowledgedAt, deletedAt: n.deletedAt }))
+        .sort((x, y) => y.at.localeCompare(x.at));
+    },
+    async listCallTasks(user, role) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return db.callTasks.map(publicCallTask).sort((x, y) => (x.status === y.status ? y.at.localeCompare(x.at) : x.status === 'open' ? -1 : 1));
+    },
+    async logCallAttempt(user, role, id, outcome, note) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      const c = db.callTasks.find((x) => x.id === id);
+      if (!c) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      // someone else must reach you: closing the call to yourself would hide that nobody reached you
+      if (c.userId === user.id) throw new ApiError('OWN_TASK', 'calls.own_task');
+      if (c.status === 'done') throw new ApiError('TASK_DONE', 'calls.already_done');
+      c.attempts.push({ at: new Date().toISOString(), byName: user.name, outcome, note: note.trim() || null });
+      if (outcome === 'reached') c.status = 'done';
+      return publicCallTask(c);
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);
