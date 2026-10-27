@@ -118,7 +118,7 @@ function canSee(user: User, role: Role, p: Project): boolean {
   return false;
 }
 
-function hold(user: User, role: Role) {
+function holdRole(user: User, role: Role) {
   if (!user.roles.includes(role)) throw new ApiError('ROLE_NOT_HELD', 'error.ROLE_NOT_HELD');
 }
 
@@ -136,8 +136,20 @@ function systemMessages(projectId: string, events: TimelineEvent[]): ChatMessage
   }));
 }
 
+const RECOVERY_REVIEWERS: readonly Role[] = ['admin', 'owner', 'backup_approver'];
+
 export function createDemoApi(): Api {
   const db = seed();
+  const sessions = new Map<string, string>();   // sessionId -> userId
+  let sessionSeq = 0;
+  function hold(user: User, role: Role) {
+    holdRole(user, role);
+    if (user.sessionId !== undefined && sessions.get(user.sessionId) !== user.id) throw new ApiError('SESSION_REVOKED', 'session.revoked');
+  }
+  function publicRecovery(r: (typeof db.recoveries)[number]): RecoveryRequest {
+    const { userId: _u, reviewerIds: _r, ...rest } = r;
+    return { ...rest, reviewerNames: [...rest.reviewerNames] };
+  }
   return {
     demo: true,
     demoAccounts: () => users,
@@ -147,7 +159,9 @@ export function createDemoApi(): Api {
       if (code !== DEMO_CODE) throw new ApiError('OTP_WRONG', 'shared.otp_wrong', true);
       // Recovery started: old sessions are revoked and nobody logs in until a person verifies (T-008).
       if (db.recoveries.some((r) => r.userId === id && r.status === 'waiting')) throw new ApiError('RECOVERY_PENDING', 'recovery.pending');
-      return users.find((u) => u.id === id)!;
+      const sessionId = `s${++sessionSeq}`;
+      sessions.set(sessionId, id);
+      return { ...users.find((u) => u.id === id)!, sessionId };
     },
     async listProjects(user, role) {
       hold(user, role);
@@ -292,6 +306,8 @@ export function createDemoApi(): Api {
       const digits = phone.replace(/\D/g, '').slice(-10);
       const userId = phones[digits] ?? null;
       const target = users.find((u) => u.id === userId);
+      // T-008: whoever holds the lost phone is signed out everywhere at once
+      for (const [sid, uid] of sessions) if (uid === userId) sessions.delete(sid);
       db.recoveries.unshift({ id: `r${db.recoveries.length + 1}`, userId, userName: target?.name ?? null,
         phoneMasked: digits.length === 10 ? `+91 ${digits.slice(0, 2)}•• ••${digits.slice(-2)}` : '—', reason,
         at: new Date().toISOString(), status: 'waiting',
@@ -301,9 +317,10 @@ export function createDemoApi(): Api {
     },
     async listSupport(user, role) {
       hold(user, role);
-      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
-      return { help: db.help.map((h) => ({ ...h })),
-               recoveries: db.recoveries.map(({ userId: _u, reviewerIds: _r, ...rest }) => ({ ...rest, reviewerNames: [...rest.reviewerNames] })) };
+      if (!RECOVERY_REVIEWERS.includes(role)) throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      // help requests are Admin work; recoveries are also reviewed by Owner and the backup approver
+      return { help: role === 'admin' ? db.help.map((h) => ({ ...h })) : [],
+               recoveries: db.recoveries.map(publicRecovery) };
     },
     async markHelpContacted(user, role, id) {
       hold(user, role);
@@ -315,7 +332,7 @@ export function createDemoApi(): Api {
     },
     async verifyRecovery(user, role, id) {
       hold(user, role);
-      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      if (!RECOVERY_REVIEWERS.includes(role)) throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
       const r = db.recoveries.find((x) => x.id === id);
       if (!r) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
       if (r.userId === user.id) throw new ApiError('SELF_APPROVAL', 'approval.own_request');
@@ -325,8 +342,20 @@ export function createDemoApi(): Api {
       r.reviewerIds.push(user.id);
       r.reviewerNames.push(user.name);
       if (r.reviewerIds.length >= r.reviewersNeeded) r.status = 'verified';
-      const { userId: _u, reviewerIds: _r, ...rest } = r;
-      return { ...rest, reviewerNames: [...rest.reviewerNames] };
+      return publicRecovery(r);
+    },
+    async closeRecovery(user, role, id, reason) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      const r = db.recoveries.find((x) => x.id === id);
+      if (!r) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      if (r.userId === user.id) throw new ApiError('SELF_APPROVAL', 'approval.own_request');
+      if (r.status !== 'waiting') throw new ApiError('APPROVAL_NOT_PENDING', 'error.APPROVAL_NOT_PENDING');
+      if (!reason.trim()) throw new ApiError('REASON_REQUIRED', 'recovery.close_reason_needed');
+      r.status = 'closed';
+      r.closedByName = user.name;
+      r.closeReason = reason.trim();
+      return publicRecovery(r);
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);

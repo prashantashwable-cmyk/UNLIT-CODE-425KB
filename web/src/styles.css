@@ -219,3 +219,4 @@ section[aria-labelledby] { margin-top: var(--space-4); }
   font-variant-numeric: tabular-nums; user-select: all; }
 .support-row { padding: var(--space-2) 0; border-bottom: 1px solid var(--c-border); display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .ok-text { color: var(--c-success); font-weight: 700; }
+.row-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }

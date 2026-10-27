@@ -106,4 +106,34 @@ describe('Account recovery (SCR-019; part of T-008 and T-259)', () => {
     expect(screen.getByText(/A person will check who you are/)).toBeInTheDocument();
     expect(screen.queryByText(/not on file|not found|not invited/i)).toBeNull();
   });
+
+  it('Owner reviews an Admin account recovery; Admin can close a request that is not genuine, with a reason', async () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    fireEvent.click(screen.getByRole('link', { name: "Can't log in?" }));
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '9800000002' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'I lost my phone' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Start recovery' })); });
+    fireEvent.click(screen.getByRole('link', { name: 'Back to log in' }));
+
+    await login('9800000009', false);                       // Owner only
+    const box = await screen.findByRole('region', { name: 'Account recovery' });
+    expect(screen.queryByRole('region', { name: 'Help requests' })).toBeNull();
+    expect(box).toHaveTextContent('Rahul Deshmukh');
+    expect(box).toHaveTextContent('2 different reviewers needed');
+    expect(within(box).queryByRole('button', { name: 'Not genuine: close' })).toBeNull();
+    await act(async () => { fireEvent.click(within(box).getByRole('button', { name: 'Verified in person' })); });
+    expect(box).toHaveTextContent('Vikram Joshi');
+    await logout();
+
+    await login('9800000001', false);                       // Asha: Admin closes it instead
+    fireEvent.click(await screen.findByRole('button', { name: 'Admin' }));
+    const box2 = await screen.findByRole('region', { name: 'Account recovery' });
+    fireEvent.click(within(box2).getByRole('button', { name: 'Not genuine: close' }));
+    await act(async () => { fireEvent.click(within(box2).getByRole('button', { name: 'Close request' })); });
+    expect(screen.getByText('Write why you are closing it')).toBeInTheDocument();
+    fireEvent.change(within(box2).getByLabelText('Why are you closing it?'), { target: { value: 'Rahul confirmed in person he has his phone' } });
+    await act(async () => { fireEvent.click(within(box2).getByRole('button', { name: 'Close request' })); });
+    expect(box2).toHaveTextContent('Closed · Asha Kulkarni · Rahul confirmed in person he has his phone');
+  });
 });

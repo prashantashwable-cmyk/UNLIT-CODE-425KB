@@ -188,6 +188,7 @@ export function ApprovalsScreen() {
       <h1>{t('admin.approvals_title')}</h1>
       {data.length === 0 && <Notice>{t('approval.none')}</Notice>}
       <div className="stack">{data.map((a) => <ApprovalCard key={`${a.id}-${a.version}`} a={a} onDone={reload} />)}</div>
+      {role !== 'admin' && <SupportPanel />}
     </Layout>
   );
 }

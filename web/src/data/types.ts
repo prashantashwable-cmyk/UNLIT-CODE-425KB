@@ -12,6 +12,8 @@ export interface User {
   name: string;
   phoneMasked: string;
   roles: Role[];
+  /** Server session; revoked when account recovery starts (T-008). Absent = not tracked. */
+  sessionId?: string;
 }
 
 export interface Project {
@@ -155,9 +157,12 @@ export interface RecoveryRequest {
   userName: string | null;     // null when the number is not on file
   reason: RecoveryReason;
   at: string;
-  status: 'waiting' | 'verified';
+  status: 'waiting' | 'verified' | 'closed';
   reviewersNeeded: number;
   reviewerNames: string[];
+  /** set when an Admin closes a request that was not genuine (lifts the login block) */
+  closedByName?: string;
+  closeReason?: string;
 }
 
 export interface ExceptionItem {
@@ -219,4 +224,5 @@ export interface Api {
   listSupport(user: User, role: Role): Promise<{ help: HelpRequest[]; recoveries: RecoveryRequest[] }>;
   markHelpContacted(user: User, role: Role, id: string): Promise<void>;
   verifyRecovery(user: User, role: Role, id: string): Promise<RecoveryRequest>;
+  closeRecovery(user: User, role: Role, id: string, reason: string): Promise<RecoveryRequest>;
 }

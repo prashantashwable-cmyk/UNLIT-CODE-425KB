@@ -124,39 +124,49 @@ export function RecoveryScreen() {
 export function SupportPanel() {
   const { t, api, user, role, lang } = useApp();
   const [data, setData] = useState<{ help: HelpRequest[]; recoveries: RecoveryRequest[] } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const canReview = role === 'admin' || role === 'owner' || role === 'backup_approver';
   const reload = useCallback(() => {
-    if (user && role === 'admin') api.listSupport(user, role).then(setData).catch(() => setData(null));
-  }, [api, user, role]);
+    if (!user || !canReview) return;
+    api.listSupport(user, role!).then((d) => { setData(d); setLoadError(null); })
+      .catch((e) => setLoadError((e as { messageKey?: string }).messageKey ?? 'support.load_failed'));
+  }, [api, user, role, canReview]);
   useEffect(reload, [reload]);
   const [error, setError] = useState<string | null>(null);
+  const [closing, setClosing] = useState<string | null>(null);
+  const [closeReason, setCloseReason] = useState('');
+  if (!canReview) return null;
+  if (loadError) return <Notice tone="danger">{t(loadError === 'session.revoked' ? loadError : 'support.load_failed')}</Notice>;
   if (!data) return null;
   const l = lang ?? 'mr';
 
   async function act(fn: () => Promise<unknown>) {
     setError(null);
-    try { await fn(); } catch (e) { setError((e as { messageKey?: string }).messageKey ?? 'error.NOT_FOUND'); }
-    reload();
+    try { await fn(); return true; } catch (e) { setError((e as { messageKey?: string }).messageKey ?? 'error.NOT_FOUND'); return false; }
+    finally { reload(); }
   }
 
   return (
     <>
-      <section aria-labelledby="sup-help">
-        <h2 id="sup-help">{t('support.help_title')}</h2>
-        {data.help.length === 0 ? <p className="muted">{t('support.none')}</p> : (
-          <ul className="list">
-            {data.help.map((h) => (
-              <li key={h.id} className="support-row">
-                <strong>{h.userName}</strong> · {t(`role.${h.role}`)} · {t(`help.kind_${h.kind}`)} · {t(`help.topic_${h.topic}`)}
-                {h.note && <div>{h.note}</div>}
-                <div className="muted">{formatTime(h.at, l)}</div>
-                {h.status === 'open'
-                  ? <Button onClick={() => act(() => api.markHelpContacted(user!, role!, h.id))}>{t('support.mark_contacted')}</Button>
-                  : <div className="ok-text"><span aria-hidden="true">✓ </span>{t('support.contacted')} · {h.handledByName}</div>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {role === 'admin' && (
+        <section aria-labelledby="sup-help">
+          <h2 id="sup-help">{t('support.help_title')}</h2>
+          {data.help.length === 0 ? <p className="muted">{t('support.none')}</p> : (
+            <ul className="list">
+              {data.help.map((h) => (
+                <li key={h.id} className="support-row">
+                  <strong>{h.userName}</strong> · {t(`role.${h.role}`)} · {t(`help.kind_${h.kind}`)} · {t(`help.topic_${h.topic}`)}
+                  {h.note && <div>{h.note}</div>}
+                  <div className="muted">{formatTime(h.at, l)}</div>
+                  {h.status === 'open'
+                    ? <Button onClick={() => act(() => api.markHelpContacted(user!, role!, h.id))}>{t('support.mark_contacted')}</Button>
+                    : <div className="ok-text"><span aria-hidden="true">✓ </span>{t('support.contacted')} · {h.handledByName}</div>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       <section aria-labelledby="sup-rec">
         <h2 id="sup-rec">{t('recovery.title')}</h2>
         {data.recoveries.length === 0 ? <p className="muted">{t('support.none')}</p> : (
@@ -166,9 +176,25 @@ export function SupportPanel() {
                 <strong>{r.userName ?? t('recovery.unknown_number')}</strong> · {r.phoneMasked} · {t(`recovery.reason_${r.reason}`)}
                 <div className="muted">{formatTime(r.at, l)} · {r.reviewersNeeded === 1 ? t('recovery.one_reviewer') : t('recovery.n_reviewers', { n: r.reviewersNeeded })}
                   {r.reviewerNames.length > 0 ? ` · ${r.reviewerNames.join(', ')}` : ''}</div>
-                {r.status === 'verified'
-                  ? <div className="ok-text"><span aria-hidden="true">✓ </span>{t('recovery.verified')}</div>
-                  : r.userName && <Button onClick={() => act(() => api.verifyRecovery(user!, role!, r.id))}>{t('recovery.verify')}</Button>}
+                {r.status === 'verified' && <div className="ok-text"><span aria-hidden="true">✓ </span>{t('recovery.verified')}</div>}
+                {r.status === 'closed' && <div className="muted">{t('recovery.closed')} · {r.closedByName} · {r.closeReason}</div>}
+                {r.status === 'waiting' && (
+                  <div className="row-actions">
+                    {r.userName && <Button onClick={() => act(() => api.verifyRecovery(user!, role!, r.id))}>{t('recovery.verify')}</Button>}
+                    {role === 'admin' && closing !== r.id && (
+                      <Button variant="secondary" onClick={() => { setClosing(r.id); setCloseReason(''); setError(null); }}>{t('recovery.close')}</Button>
+                    )}
+                  </div>
+                )}
+                {r.status === 'waiting' && closing === r.id && (
+                  <div className="field">
+                    <label htmlFor={`close-${r.id}`}>{t('recovery.close_reason')}</label>
+                    <input id={`close-${r.id}`} value={closeReason} onChange={(e) => setCloseReason(e.target.value)} />
+                    <Button variant="danger" onClick={async () => {
+                      if (await act(() => api.closeRecovery(user!, role!, r.id, closeReason))) setClosing(null);
+                    }}>{t('recovery.close_confirm')}</Button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
