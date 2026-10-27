@@ -1,9 +1,9 @@
 # STATE (update after every task; this is the memory between cloud sessions)
 
-**Current phase:** 0 (Decide) — build not started
+**Current phase:** 0 → 1 (stack confirmed; other tier 1 decisions run on their defaults)
 **Last updated:** 2026-10-27
 
-NEXT: blocked - owner to answer docs/adr/0001-stack.md section 5 (DEC-012 stack questions) and record tier 1 answers with scripts/decide.py; then Phase 1 task 1 (migrations + RLS)
+NEXT: Phase 1 task 1 - migrations from docs/appendix/schema-skeleton.sql with RLS on every table so `bash scripts/test-db.sh rls` returns zero rows (fix vacuous pass + spatial_ref_sys first); RLS tests first (FIRST_PROMPTS #2)
 
 ## Done
 - 2026-10-27 Phase 0: project unpacked from the uploaded zip into the repo root. Ran `spec.py dec` for tier 1 (012, 014, 005, 016, 017, 027, 031): all unanswered. Wrote `docs/adr/0001-stack.md` (PROPOSED, not decided) and `docs/DECISIONS.md` tracker (32 decisions, answer/date/approver columns).
@@ -23,7 +23,7 @@ NEXT: blocked - owner to answer docs/adr/0001-stack.md section 5 (DEC-012 stack 
 -
 
 ## Blocked (needs owner / professional / provider / device)
-- Tier 1 decisions: DEC-012, 014, 005, 016, 017, 027, 031 (see docs/DECISIONS.md). DEC-012 stack questions listed in docs/adr/0001-stack.md section 5
+- Tier 1 decisions still open: DEC-005, 016, 017, 027, 031 (build uses their defaults; see docs/DECISIONS.md). ADR 0001 section 5 Q4–Q7 open (maintainer, phone models, hosting budget, data residency; India region assumed until the lawyer answers)
 - Written opinions: lawyer, CA, licensed lift engineer, payment provider
 
 ## NEEDS_DEVICE / NEEDS_PROVIDER backlog
@@ -31,3 +31,7 @@ NEXT: blocked - owner to answer docs/adr/0001-stack.md section 5 (DEC-012 stack 
 
 ## Assumptions made (each must cite a DEC default)
 -
+
+- DECIDED AIEC-DEC-012 on 2026-10-27 by Owner: Native Kotlin (Jetpack Compose) for Rider/Technician/QC, Android-only at launch; web (TypeScript + React) for other roles; Supabase-hosted PostgreSQL+PostGIS; TypeScript server. Per docs/adr/0001-stack.md  (review flags in config/flags.defaults.json)
+
+- DECIDED AIEC-DEC-014 on 2026-10-27 by Owner: Phases as in section 39; Pune-only pilot  (review flags in config/flags.defaults.json)

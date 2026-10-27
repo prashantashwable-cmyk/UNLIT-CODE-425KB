@@ -4,14 +4,22 @@
   "tier": "1. Before the build starts",
   "question": "Will the field app (Rider, Technician, QC) be Android-only at launch, and which framework?",
   "default_until_answered": "Native Android for field roles, web for others; framework chosen by the builder before Phase 1",
-  "answer": null
+  "answer": {
+   "text": "Native Kotlin (Jetpack Compose) for Rider/Technician/QC, Android-only at launch; web (TypeScript + React) for other roles; Supabase-hosted PostgreSQL+PostGIS; TypeScript server. Per docs/adr/0001-stack.md",
+   "by": "Owner",
+   "date": "2026-10-27"
+  }
  },
  {
   "id": "AIEC-DEC-014",
   "tier": "1. Before the build starts",
   "question": "What is in release 1, and is the pilot Pune only?",
   "default_until_answered": "Phases in section 39; Pune pilot",
-  "answer": null
+  "answer": {
+   "text": "Phases as in section 39; Pune-only pilot",
+   "by": "Owner",
+   "date": "2026-10-27"
+  }
  },
  {
   "id": "AIEC-DEC-005",

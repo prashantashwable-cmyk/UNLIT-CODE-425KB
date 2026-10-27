@@ -5,7 +5,7 @@ Test IDs refer to `docs/data/tests.jsonl` (grep `T-0xx`).
 
 ## Phase 0 — Decide (no code)
 - [ ] ⚠️ Fill `answer` fields in `docs/data/decisions.json` (source of truth) as the owner decides; track tier 1 and tier 2 decisions in `docs/DECISIONS.md` (created 2026-10-27; copy table from `docs/spec/40-decisions-overview.md`, add answer/date/approver columns)
-- [ ] ADR `docs/adr/0001-stack.md` (DEC-012) — proposed 2026-10-27, waiting for owner
+- [x] ADR `docs/adr/0001-stack.md` (DEC-012) — owner confirmed 2026-10-27 (Kotlin, Android-only, Supabase)
 - [ ] ⚖️ Request written opinions: lawyer, CA, licensed lift engineer, payment provider
 - Exit: owner signs off spec. Tests: T-099
 

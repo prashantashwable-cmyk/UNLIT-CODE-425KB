@@ -5,8 +5,8 @@ Questions and defaults copied from `docs/spec/40-decisions-overview.md`. Full op
 
 | Tier | Decision | Question | Default until answered | Answer | Date | Approved by |
 |---|---|---|---|---|---|---|
-| 1 | AIEC-DEC-012 | Will the field app (Rider, Technician, QC) be Android-only at launch, and which framework? | Native Android for field roles, web for others; framework chosen by the builder before Phase 1 | — | — | — |
-| 1 | AIEC-DEC-014 | What is in release 1, and is the pilot Pune only? | Phases in section 39; Pune pilot | — | — | — |
+| 1 | AIEC-DEC-012 | Will the field app (Rider, Technician, QC) be Android-only at launch, and which framework? | Native Android for field roles, web for others; framework chosen by the builder before Phase 1 | Native Kotlin, Android-only field app; React web; Supabase Postgres+PostGIS; TS server (ADR 0001) | 2026-10-27 | Owner |
+| 1 | AIEC-DEC-014 | What is in release 1, and is the pilot Pune only? | Phases in section 39; Pune pilot | Phases in §39; Pune-only pilot | 2026-10-27 | Owner |
 | 1 | AIEC-DEC-005 | Who holds the lift contractor licence on each job: AIEC, a partner contractor, or the owner? | The app stores the licence holder per project; a job cannot reach the permit stage without one named | — | — | — |
 | 1 | AIEC-DEC-016 | Are workers independent contractors, and has a labour lawyer approved the contract terms? | Live contractor onboarding stays off until a legal review is recorded; demo mode works | — | — | — |
 | 1 | AIEC-DEC-017 | Confirm: no stored-value wallet, only an earnings ledger and an authorised payout partner? | Ledger only (no wallet) | — | — | — |

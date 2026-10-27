@@ -1,6 +1,6 @@
 # ADR 0001 — Technology stack
 
-- **Status:** PROPOSED. Waiting for owner confirmation. Nothing here is decided.
+- **Status:** ACCEPTED in part (2026-10-27, Owner): field app = native Kotlin, Android-only at launch; hosting = Supabase; release 1 = §39 phases, Pune pilot (DEC-014). The rest of the proposal (TypeScript server, React web, own sync protocol, rules in Postgres) is accepted as the builder default. Still open: section 5 Q4–Q7 and the other tier 1 decisions.
 - **Decision:** AIEC-DEC-012 (tier 1). Related tier 1 decisions: DEC-014, 005, 016, 017, 027, 031.
 - **Date proposed:** 2026-10-27
 - **Approval needed from:** Owner + builder (per DEC-012 record)
@@ -77,6 +77,8 @@ Evidence and money events are **append-only**, and §31 conflict rules are domai
 - No live payouts, no wallet, no contractor onboarding, no rescue page: the flags in `config/flags.defaults.json` stay off whatever stack is chosen.
 
 ## 5. What I need from you (owner)
+
+Answered 2026-10-27: Q1 (native Kotlin), Q2 (Android-only), Q3 (Supabase), DEC-014 (§39 phases, Pune). Still open: Q4–Q7, DEC-005, 016, 017, 027, 031.
 
 Answer in writing; record each with `python3 scripts/decide.py <n> "<answer>" --by "<name>"`.
 
