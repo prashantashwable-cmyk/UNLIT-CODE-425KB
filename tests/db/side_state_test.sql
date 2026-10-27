@@ -44,13 +44,20 @@ insert into project_assignment (project_id, user_id, role) values
 insert into evidence_asset (id, project_id, captured_by, kind, sha256, original_uri, client_time, risk) values
   ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-000000000071', 'photo', '\x01', 'cap://1', now(), 'green'),
   ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-000000000071', 'photo', '\x02', 'cap://2', now(), 'red'),
-  ('00000000-0000-0000-0000-0000000000e3', '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-000000000061', 'photo', '\x03', 'cap://3', now(), 'green');
+  ('00000000-0000-0000-0000-0000000000e3', '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-000000000061', 'photo', '\x03', 'cap://3', now(), 'green'),
+  ('00000000-0000-0000-0000-0000000000e5', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-000000000071', 'video', '\x05', 'cap://5', now(), 'green');
+-- e4: a revisit capture received after the project was marked Lost
+insert into evidence_asset (id, project_id, captured_by, kind, sha256, original_uri, client_time, risk, server_time) values
+  ('00000000-0000-0000-0000-0000000000e4', '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-000000000061', 'photo', '\x04', 'cap://4',
+   now(), 'green', now() + interval '1 minute');
 
 -- ---------- rules are data ----------
 select t.eq((select count(*) from side_state_rule where from_side = 'cancelled'), 0, 'Cancelled is final: no rule leaves it');
 select t.throws($q$insert into side_state_rule (from_side, to_side, allowed_roles) values ('cancelled', 'none', '{admin}')$q$,
   '23514', 'Cancelled stays final even if someone edits the rules later');
 select t.eq((select count(*) from side_state_rule where 'owner' = any (allowed_roles)), 0, 'Owner does not set side states');
+select t.eq((select count(*) from side_state_rule where to_side = 'cancelled' and 'customer' = any (allowed_roles)), 0,
+  'customer cancellation goes through an Admin-decided request, not a direct cancel');
 select t.ok((select causes @> '{customer,supplier,weather,permit,defect}' and min_evidence >= 1
              from side_state_rule where from_side = 'none' and to_side = 'on_hold'), 'On hold needs a cause from §16.3 and proof');
 
@@ -117,6 +124,13 @@ select t.side('00000000-0000-0000-0000-0000000000f1', 'disputed', 'd1', '0000000
 select t.side('00000000-0000-0000-0000-0000000000f1', 'none', 'd2', '00000000-0000-0000-0000-0000000000a1', 'admin', 'door panel replaced');
 reset role;
 select t.eq((select count(*) from audit_event where action in ('side_state.disputed', 'side_state.none')), 3, 'dispute and resolutions audited');
+-- a new hold needs new proof: the photo that backed the first hold does not count again
+select t.login('00000000-0000-0000-0000-0000000000a1');
+select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f1', 'on_hold', 'h3', '00000000-0000-0000-0000-0000000000a1', 'admin',
+  'rain again', 'weather', array['00000000-0000-0000-0000-0000000000e1']::uuid[])$q$, 'SIDE_PROOF_REQUIRED', 'old photo cannot back a new hold');
+select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f1', 'on_hold', 'h3', '00000000-0000-0000-0000-0000000000a1', 'admin',
+  'rain again', 'weather', array['00000000-0000-0000-0000-0000000000e5']::uuid[])$q$, 'SIDE_PROOF_REQUIRED', 'a video is not the photo the rule asks for');
+reset role;
 
 -- ---------- lost and revisit ----------
 select t.login('00000000-0000-0000-0000-0000000000a1');
@@ -128,9 +142,12 @@ select t.side('00000000-0000-0000-0000-0000000000f2', 'lost', 'l1', '00000000-00
 reset role;
 select t.login('00000000-0000-0000-0000-000000000061');
 select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f2', 'none', 'l2', '00000000-0000-0000-0000-000000000061', 'rider', 'revisit')$q$,
-  'SIDE_PROOF_REQUIRED', 'revisit needs a new capture');
+  'SIDE_PROOF_REQUIRED', 'revisit needs a capture');
+select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f2', 'none', 'l2', '00000000-0000-0000-0000-000000000061', 'rider',
+  'revisit', null, array['00000000-0000-0000-0000-0000000000e3']::uuid[])$q$,
+  'SIDE_PROOF_REQUIRED', 'a photo from before the project was lost does not re-open it');
 select t.side('00000000-0000-0000-0000-0000000000f2', 'none', 'l2', '00000000-0000-0000-0000-000000000061', 'rider',
-  'builder called back, new tower', null, array['00000000-0000-0000-0000-0000000000e3']::uuid[]);
+  'builder called back, new tower', null, array['00000000-0000-0000-0000-0000000000e4']::uuid[]);
 reset role;
 select t.ok((select side_state = 'none' from project where id = '00000000-0000-0000-0000-0000000000f2'), 'revisit capture re-opens a lost project');
 
@@ -140,9 +157,14 @@ select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f1', 'cancelled
   'ROLE_NOT_ALLOWED', 'a customer not on the project cannot cancel it');
 reset role;
 select t.login('00000000-0000-0000-0000-000000000091');
-select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f1', 'cancelled', 'c1', '00000000-0000-0000-0000-000000000091', 'customer')$q$,
+select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f1', 'cancelled', 'c1', '00000000-0000-0000-0000-000000000091', 'customer', 'building sold')$q$,
+  'ROLE_NOT_ALLOWED', 'customer cannot cancel directly (requests it; Admin applies)');
+reset role;
+select t.login('00000000-0000-0000-0000-0000000000a1');
+select t.err($q$select t.side('00000000-0000-0000-0000-0000000000f1', 'cancelled', 'c1', '00000000-0000-0000-0000-0000000000a1', 'admin')$q$,
   'REASON_REQUIRED', 'cancellation needs a reason');
-select t.side('00000000-0000-0000-0000-0000000000f1', 'cancelled', 'c1', '00000000-0000-0000-0000-000000000091', 'customer', 'building sold');
+select t.side('00000000-0000-0000-0000-0000000000f1', 'cancelled', 'c1', '00000000-0000-0000-0000-0000000000a1', 'admin',
+  'customer cancellation request approved: building sold');
 reset role;
 select t.eq((select count(*) from outbox where topic = 'project.side_state_changed' and payload->>'to_side' = 'cancelled'), 1,
   'cancellation emits the event the refund engine will consume');

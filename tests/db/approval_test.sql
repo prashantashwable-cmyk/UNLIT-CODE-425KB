@@ -1,6 +1,7 @@
 -- request_approval / decide_approval tests: §26 (approvals are structured records), invariant 5, DEC-027 default.
--- Covers T-004 at the database level (Admin A's override: A cannot approve it; a second Admin or the Owner can; the
--- override is recorded red in the audit log). The timeline UI that shows the red entry is not built.
+-- Covers T-004 at the database level (Admin A's override: A cannot approve it; a second Admin, the Owner or the backup
+-- approver can; the override is recorded red in the audit log). The timeline UI that shows the red entry is not built.
+-- Not covered: T-022 / T-235 (below-floor price needs Owner plus a second approver: separate kind, Phase 4).
 -- Run with: bash scripts/test-db.sh test. One transaction, rolled back.
 \set QUIET on
 \o /dev/null
@@ -27,6 +28,7 @@ insert into user_account (id, phone_e164, display_name) values
   ('00000000-0000-0000-0000-0000000000ff', '+919800000099', 'no roles');
 insert into role_assignment (user_id, role) values
   ('00000000-0000-0000-0000-0000000000a1', 'admin'),
+  ('00000000-0000-0000-0000-0000000000a1', 'owner'),
   ('00000000-0000-0000-0000-0000000000a2', 'admin'),
   ('00000000-0000-0000-0000-0000000000a3', 'backup_approver'),
   ('00000000-0000-0000-0000-0000000000a9', 'owner'),
@@ -131,6 +133,17 @@ select t.err($q$select t.decide((select id from ids), 'approved', '00000000-0000
   'APPROVERS_NOT_CONFIGURED', 'DEC-027 default: no decisions until two approvers and a backup exist');
 reset role;
 update role_assignment set valid_to = null where role = 'backup_approver';
+-- the backup must be a third person: if only one other Admin/Owner remains besides the backup, still closed
+update role_assignment set valid_to = now() - interval '1 second'
+  where user_id in ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a9');
+insert into role_assignment (user_id, role) values ('00000000-0000-0000-0000-0000000000a3', 'admin');
+select t.login('00000000-0000-0000-0000-000000000081');
+select t.err($q$select t.decide((select id from ids), 'approved', '00000000-0000-0000-0000-000000000081', 'qc', 1)$q$,
+  'APPROVERS_NOT_CONFIGURED', 'DEC-027: the backup approver cannot also be one of the two approvers');
+reset role;
+delete from role_assignment where user_id = '00000000-0000-0000-0000-0000000000a3' and role = 'admin';
+update role_assignment set valid_to = null
+  where user_id in ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a9');
 select t.login('00000000-0000-0000-0000-000000000081');
 select t.decide((select id from ids), 'approved', '00000000-0000-0000-0000-000000000081', 'qc', 1);
 select t.err($q$select t.decide((select id from ids), 'rejected', '00000000-0000-0000-0000-000000000081', 'qc', 2, 'changed mind')$q$,
@@ -147,6 +160,37 @@ reset role;
 select t.ok((select stage = 'permit_applied' from project where id = '00000000-0000-0000-0000-0000000000f1'),
   'approval made through decide_approval satisfies the stage gate');
 
+-- a rejection keeps the requester's reason and stores the decider's separately
+select t.login('00000000-0000-0000-0000-000000000071');
+select t.req('00000000-0000-0000-0000-0000000000f1', 'qc_clearance', '00000000-0000-0000-0000-000000000071', 'technician', 'r4',
+  'measurements attached');
+reset role;
+select t.login('00000000-0000-0000-0000-000000000081');
+select t.decide((select id from approval where idempotency_key = 'r4'), 'rejected', '00000000-0000-0000-0000-000000000081', 'qc', 1,
+  'pit depth photo blurred');
+reset role;
+select t.ok((select status = 'rejected' and reason = 'measurements attached' and decision_reason = 'pit depth photo blurred'
+             from approval where idempotency_key = 'r4'), 'rejection keeps requester reason and records decider reason');
+
+-- ---------- customer cancellation is a request that Admin decides (§16.3) ----------
+select t.login('00000000-0000-0000-0000-000000000071');
+select t.err($q$select t.req('00000000-0000-0000-0000-0000000000f1', 'cancellation', '00000000-0000-0000-0000-000000000071', 'technician', 'x1', 'tired')$q$,
+  'ROLE_NOT_ALLOWED', 'technician cannot request a cancellation');
+reset role;
+select t.login('00000000-0000-0000-0000-000000000091');
+select t.err($q$select t.req('00000000-0000-0000-0000-0000000000f1', 'cancellation', '00000000-0000-0000-0000-000000000091', 'customer', 'x1')$q$,
+  'REASON_REQUIRED', 'cancellation request needs a reason');
+select t.req('00000000-0000-0000-0000-0000000000f1', 'cancellation', '00000000-0000-0000-0000-000000000091', 'customer', 'x1', 'building sold');
+reset role;
+select t.login('00000000-0000-0000-0000-000000000081');
+select t.err($q$select t.decide((select id from approval where idempotency_key = 'r1'), 'approved', '00000000-0000-0000-0000-000000000081', 'qc', 2)$q$,
+  'APPROVAL_NOT_PENDING', 'decided approval stays decided');
+reset role;
+select t.login('00000000-0000-0000-0000-0000000000a1');
+select t.decide((select id from approval where idempotency_key = 'x1'), 'approved', '00000000-0000-0000-0000-0000000000a1', 'admin', 1);
+reset role;
+select t.ok((select status = 'approved' from approval where idempotency_key = 'x1'), 'Admin decides the customer''s cancellation request');
+
 -- ---------- T-004: overrides are loud and need a second Admin or the Owner ----------
 select t.login('00000000-0000-0000-0000-0000000000a1');
 select t.err($q$select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-0000-0000-0000000000a1', 'admin', 'o1')$q$,
@@ -155,6 +199,13 @@ select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-
 select t.err($q$select t.decide((select id from approval where idempotency_key = 'o1'), 'approved', '00000000-0000-0000-0000-0000000000a1', 'admin', 1)$q$,
   'SELF_APPROVAL', 'T-004 Admin A cannot approve own override');
 select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-0000-0000-0000000000a1', 'admin', 'o2', 'second override');
+select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-0000-0000-0000000000a1', 'admin', 'o3', 'third override');
+select t.err($q$select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-0000-0000-0000000000a1', 'owner', 'o1', 'same key')$q$,
+  'IDEMPOTENCY_CONFLICT', 'replaying a key under a different role is refused');
+reset role;
+select t.login('00000000-0000-0000-0000-000000000051');
+select t.err($q$select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-0000-0000-000000000051', 'sales', 'o9', 'x')$q$,
+  'ROLE_NOT_ALLOWED', 'only Admin or Owner request overrides');
 reset role;
 select t.login('00000000-0000-0000-0000-000000000081');
 select t.err($q$select t.decide((select id from ids), 'approved', '00000000-0000-0000-0000-000000000081', 'qc', 2)$q$,
@@ -171,9 +222,22 @@ reset role;
 select t.login('00000000-0000-0000-0000-0000000000a9');
 select t.decide((select id from approval where idempotency_key = 'o2'), 'approved', '00000000-0000-0000-0000-0000000000a9', 'owner', 1);
 reset role;
-select t.eq((select count(*) from approval where kind = 'override' and status = 'approved'), 2, 'T-004 second Admin or Owner approves an override');
+select t.login('00000000-0000-0000-0000-0000000000a3');
+select t.decide((select id from approval where idempotency_key = 'o3'), 'approved', '00000000-0000-0000-0000-0000000000a3', 'backup_approver', 1);
+reset role;
+select t.eq((select count(*) from approval where kind = 'override' and status = 'approved'), 3,
+  'T-004 a second Admin, the Owner or the backup approver approves an override');
+select t.ok((select reason = 'permit office closed; proceed on scanned receipt' and decision_reason is null
+             from approval where idempotency_key = 'o1'), 'override keeps its justification after approval');
 select t.eq((select count(*) from audit_event where action in ('override.requested', 'override.approved') and detail->>'severity' = 'red'),
-  4, 'T-004 override request and approval are red audit entries');
+  6, 'T-004 override requests and approvals are red audit entries');
+
+-- no new requests on a cancelled project
+update project set side_state = 'cancelled' where id = '00000000-0000-0000-0000-0000000000f1';
+select t.login('00000000-0000-0000-0000-0000000000a1');
+select t.err($q$select t.req('00000000-0000-0000-0000-0000000000f1', 'override', '00000000-0000-0000-0000-0000000000a1', 'admin', 'o4', 'late')$q$,
+  'SIDE_STATE_BLOCKED', 'cancelled project takes no new approval requests');
+reset role;
 
 -- ---------- nobody writes approvals around the functions ----------
 select set_config('request.jwt.claim.sub', '', true);

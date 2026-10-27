@@ -1,7 +1,7 @@
 -- 0004: project state machine (spec §16.2, §16.3; invariants 4, 5; T-098, T-121).
 -- Stage changes happen only in apply_stage_transition. The gates live in stage_transition as data: the seeded rows are
--- generic defaults derived from §16.2 and the decision defaults (§40), editable later from owner/admin settings
--- (rule-change flow), not code.
+-- generic defaults derived from §16.2 and the decision defaults (§40). They are data, not code; until the audited,
+-- versioned rule-change flow exists (Admin proposes, Owner approves) they change only by migration.
 --
 -- required_proofs entries:
 --   {"type":"evidence","kind":"photo","min":3}            captures of this project listed in the call that passed checks
@@ -99,13 +99,28 @@ insert into stage_transition (from_stage, to_stage, required_approver_roles, req
   ('cabin_delivery', 'installation', '{technician,admin}',
    '[{"type":"approval","kind":"cabin_delivered","approver_roles":["admin"]}]'),
   ('installation', 'qc_inspector', '{qc,admin}',
-   '[{"type":"approval","kind":"installation_peer_check","approver_roles":["qc","technician"]}]'),
+   -- Technician of another team joins as approver once teams exist (T-055); until then QC only
+   '[{"type":"approval","kind":"installation_peer_check","approver_roles":["qc"]}]'),
   -- safety-critical sign-off is human-only: both are approvals by people, never AI
   ('qc_inspector', 'licence', '{qc,admin}',
    '[{"type":"approval","kind":"qc_pass","approver_roles":["qc"]},{"type":"approval","kind":"inspector_passed","approver_roles":["admin"]}]'),
   -- DEC-013 default: handover only after the licence is recorded
   ('licence', 'handover', '{admin}',
    '[{"type":"approval","kind":"licence_recorded","approver_roles":["admin"]}]');
+
+-- DEC-027 default: approval features stay closed until two approvers (Admin/Owner) and a backup approver who is a
+-- third person exist (the backup cannot be one of the two).
+create function app.approvers_configured() returns boolean
+language sql stable security definer set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from role_assignment b
+    where b.role = 'backup_approver' and b.valid_from <= now() and (b.valid_to is null or b.valid_to > now())
+      and (select count(distinct ra.user_id) from role_assignment ra
+           where ra.role in ('admin', 'owner') and ra.user_id <> b.user_id
+             and ra.valid_from <= now() and (ra.valid_to is null or ra.valid_to > now())) >= 2);
+$$;
+revoke all on function app.approvers_configured() from public;
+grant execute on function app.approvers_configured() to authenticated;
 
 -- ---------- the one function that changes stage ----------
 create function public.apply_stage_transition(
@@ -183,11 +198,8 @@ begin
           raise exception 'STAGE_GATE_BLOCKED: needs % % evidence, got %', v_proof->>'min', v_proof->>'kind', v_n;
         end if;
       when 'approval' then
-        -- DEC-027 default: approval-based gates stay closed until two approvers (Admin/Owner) and a backup exist.
-        if (select count(distinct ra.user_id) from role_assignment ra where ra.role in ('admin', 'owner')
-              and ra.valid_from <= now() and (ra.valid_to is null or ra.valid_to > now())) < 2
-           or not exists (select 1 from role_assignment ra where ra.role = 'backup_approver'
-              and ra.valid_from <= now() and (ra.valid_to is null or ra.valid_to > now())) then
+        -- DEC-027 default: approval-based gates stay closed until two approvers and a separate backup exist.
+        if not app.approvers_configured() then
           raise exception 'APPROVERS_NOT_CONFIGURED: two approvers and a backup approver must exist (DEC-027)';
         end if;
         -- valid = decided after the last backward move, by someone who now holds an allowed approver role and,
