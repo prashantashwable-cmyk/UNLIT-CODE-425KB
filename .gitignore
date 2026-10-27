@@ -13,3 +13,4 @@ build/
 web/dist/
 web/screenshots/
 web/test-results/
+web/dist-single/

@@ -37,10 +37,19 @@ function save(key: string, value: unknown) {
   } catch { /* storage unavailable */ }
 }
 
+// Until the person picks a look in Me, follow the phone's light/dark setting.
+function systemTheme(): ThemeName {
+  try {
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
 export function AppProvider({ children, api }: { children: ReactNode; api?: Api }) {
   const [theApi] = useState<Api>(() => api ?? createDemoApi());
   const [lang, setLangState] = useState<Lang | null>(() => load<Lang | null>('lang', null));
-  const [theme, setThemeState] = useState<ThemeName>(() => load<ThemeName>('theme', 'light'));
+  const [theme, setThemeState] = useState<ThemeName>(() => load<ThemeName>('theme', systemTheme()));
   const [scale, setScaleState] = useState<number>(() => load<number>('scale', 100));
   const [user, setUser] = useState<User | null>(null);
   const [role, setRoleState] = useState<Role | null>(null);
