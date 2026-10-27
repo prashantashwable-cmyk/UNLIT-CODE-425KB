@@ -2,14 +2,21 @@
 // (db/migrations/0004, 0005) so the UI behaves the same once the Supabase adapter replaces it. The database remains
 // the authority: these checks are for display only.
 import flagDefaults from '../../../config/flags.defaults.json';
+import { deliver, planDelivery, type Attempt, type EventClass, type Priority, type QuietHours } from './notify';
 import { STAGES, type Stage } from './stages';
 import {
-  ApiError, type Api, type Approval, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
+  ApiError, type Api, type AppNotification, type Approval, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
   type FeatureFlag, type HelpRequest, type Project, type RecoveryRequest, type Role, type RuleProposal, type RuleSetting,
   type TimelineEvent, type User,
 } from './types';
 
 const DEMO_CODE = '123456';
+/** Asia/Kolkata: the Pune pilot (DEC-014). Quiet-hour times themselves are settings. */
+const PILOT_TZ_OFFSET_MIN = 330;
+/** No SMS, WhatsApp, email, push or call provider is connected in the demo (NEEDS_PROVIDER). */
+const noProvider: Attempt = () => 'not_connected';
+
+type StoredNotification = AppNotification & { userId: string; role: Role; deletedAt: string | null; sent: boolean };
 
 const users: User[] = [
   { id: 'u-admin', name: 'Asha Kulkarni', phoneMasked: '+91 98•• ••01', roles: ['admin', 'owner'] },
@@ -105,12 +112,42 @@ function seed() {
     rule('lead_photos_min', 3, 'count', 1, 20, '§16.2 stage 1'),
     // §16.2 says 'per SOP' with no number: generic placeholder the owner asked for, to be set in settings.
     rule('readiness_photos_min', 1, 'count', 1, 30, 'Generic placeholder (§16.2: per SOP)'),
+    // §33 has quiet hours but no times: generic placeholder, changeable in settings.
+    rule('quiet_hours_start', 21, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
+    rule('quiet_hours_end', 7, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
   ];
+  const notifications: StoredNotification[] = [];
+  const notify = (id: string, userId: string, role: Role, cls: EventClass, priority: Priority, at: string, textKey: string,
+                  target: string, vars?: Record<string, string | number>) => {
+    const plan = planDelivery(cls, priority, new Date(at), quietHours(rules));
+    const out = deliver(plan, noProvider, at);
+    notifications.push({ id, userId, role, cls, priority: plan.priority, at, textKey, vars, target, heldUntil: plan.deferredUntil,
+                         receipts: out.receipts, humanTask: out.humanTask, acknowledgedAt: null, deletedAt: null, sent: !plan.deferredUntil });
+  };
+  // Approvers other than the requester (Asha asked for a2, so she is not told to decide it).
+  notify('n1', 'u-admin2', 'admin', 'approval', 'critical', '2026-10-27T04:10:00.000Z', 'notif.override_needed', '/admin/approvals', { code: 'PUN-0006' });
+  notify('n2', 'u-owner', 'owner', 'approval', 'critical', '2026-10-27T04:10:00.000Z', 'notif.override_needed', '/admin/approvals', { code: 'PUN-0006' });
+  for (const [i, uid] of ['u-admin', 'u-admin2'].entries()) {
+    notify(`n3${i}`, uid, 'admin', 'payment', 'normal', '2026-10-27T04:30:00.000Z', 'notif.payment_updated', '/money', { code: 'PUN-0002' });
+    notify(`n4${i}`, uid, 'admin', 'reminder', 'normal', '2026-10-26T17:00:00.000Z', 'notif.readiness_pending', '/project/p3', { code: 'PUN-0003' });
+  }
+  for (const [i, uid] of ['u-admin', 'u-owner'].entries()) {
+    notify(`n5${i}`, uid, 'owner', 'summary', 'normal', '2026-10-26T16:00:00.000Z', 'notif.weekly_summary', '/analytics');
+  }
+  notify('n6', 'u-cust', 'customer', 'payment', 'normal', '2026-10-27T03:00:00.000Z', 'notif.payment_due', '/money', { code: 'PUN-0003' });
+  notify('n7', 'u-cust', 'customer', 'reminder', 'normal', '2026-10-26T18:30:00.000Z', 'notif.site_ready', '/c/progress');
   const proposals: RuleProposal[] = [];
   const help: HelpRequest[] = [];
   const recoveries: (RecoveryRequest & { userId: string | null; reviewerIds: string[] })[] = [];
-  return { projects, approvals, timelines, payments, messages, rules, proposals, help, recoveries };
+  return { projects, approvals, timelines, payments, messages, rules, proposals, help, recoveries, notifications };
 }
+
+function quietHours(rules: RuleSetting[]): QuietHours {
+  const v = (key: string) => rules.find((r) => r.key === key)!.value;
+  return { startHour: v('quiet_hours_start'), endHour: v('quiet_hours_end'), tzOffsetMinutes: PILOT_TZ_OFFSET_MIN };
+}
+
+const WHOLE_UNITS: readonly RuleSetting['unit'][] = ['days', 'count', 'hour'];
 
 function canSee(user: User, role: Role, p: Project): boolean {
   if (role === 'admin') return true;   // Owner: summary only (matrix), no project rows
@@ -259,7 +296,8 @@ export function createDemoApi(): Api {
       const r = db.rules.find((x) => x.key === key);
       if (!r) throw new ApiError('RULE_NOT_FOUND', 'error.NOT_FOUND');
       if (!reason.trim()) throw new ApiError('REASON_REQUIRED', 'rules.reason_needed');
-      if (!Number.isFinite(value) || value < r.min || value > r.max) throw new ApiError('VALUE_OUT_OF_RANGE', 'rules.out_of_range');
+      if (!Number.isFinite(value) || value < r.min || value > r.max
+          || (WHOLE_UNITS.includes(r.unit) && !Number.isInteger(value))) throw new ApiError('VALUE_OUT_OF_RANGE', 'rules.out_of_range');
       // One open proposal per setting, so approving an old one cannot overwrite a newer one.
       if (db.proposals.some((x) => x.key === key && x.status === 'requested')) throw new ApiError('RULE_PENDING', 'rules.pending_exists');
       const p: RuleProposal = { id: `rp${db.proposals.length + 1}`, key, from: r.value, to: value, reason: reason.trim(),
@@ -356,6 +394,42 @@ export function createDemoApi(): Api {
       r.closedByName = user.name;
       r.closeReason = reason.trim();
       return publicRecovery(r);
+    },
+    async listNotifications(user, role) {
+      hold(user, role);
+      const now = Date.now();
+      const mine = db.notifications.filter((n) => n.userId === user.id && n.role === role && !n.deletedAt);
+      for (const n of mine) {
+        // Outbox worker stand-in: a held item goes out once quiet hours end.
+        if (!n.sent && n.heldUntil && new Date(n.heldUntil).getTime() <= now) {
+          const out = deliver({ cls: n.cls, priority: n.priority, channels: planDelivery(n.cls, n.priority, new Date(n.heldUntil),
+            quietHours(db.rules)).channels, deferredUntil: null }, noProvider, n.heldUntil);
+          n.receipts = out.receipts;
+          n.humanTask = out.humanTask;
+          n.sent = true;
+        }
+      }
+      return mine.sort((x, y) => y.at.localeCompare(x.at))
+        .map(({ userId: _u, role: _r, deletedAt: _d, sent: _s, ...rest }) => ({ ...rest, receipts: rest.receipts.map((r) => ({ ...r })) }));
+    },
+    async acknowledgeNotification(user, role, id) {
+      hold(user, role);
+      const n = db.notifications.find((x) => x.id === id && x.userId === user.id && x.role === role && !x.deletedAt);
+      if (!n) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      n.acknowledgedAt ??= new Date().toISOString();
+    },
+    async deleteNotification(user, role, id) {
+      hold(user, role);
+      const n = db.notifications.find((x) => x.id === id && x.userId === user.id && x.role === role && !x.deletedAt);
+      if (!n) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      if (n.priority === 'critical' && !n.acknowledgedAt) throw new ApiError('ACK_REQUIRED', 'notif.ack_first');
+      n.deletedAt = new Date().toISOString();
+    },
+    async notificationAudit(user, role) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return db.notifications.map((n) => ({ id: n.id, userName: users.find((u) => u.id === n.userId)!.name, role: n.role, cls: n.cls,
+        priority: n.priority, at: n.at, acknowledgedAt: n.acknowledgedAt, deletedAt: n.deletedAt }));
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);

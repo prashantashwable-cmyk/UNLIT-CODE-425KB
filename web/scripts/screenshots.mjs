@@ -79,10 +79,12 @@ for (const lang of ['mr', 'hi', 'en']) {
       ['07-me', null, nav(4)],
       ['07b-analytics', null, nav(5)],
       ['07c-rules', null, async (p) => { await nav(4)(p); await p.locator('a[href="/admin/rules"]').click(); }],
+      ['07d-notifications', null, async (p) => p.locator('a.bell').click()],
     ]);
   }
   await session(lang, mobile, '9800000021', null, [['08-customer-progress', null, null], ['08b-customer-money', null, nav(3)],
-    ['08c-customer-chat', null, async (p) => { await nav(2)(p); await p.locator('.list-item').first().click(); }]]);
+    ['08c-customer-chat', null, async (p) => { await nav(2)(p); await p.locator('.list-item').first().click(); }],
+    ['08d-customer-notifications', null, async (p) => p.locator('a.bell').click()]]);
   await session(lang, desktop, '9800000009', null, [['09-owner-decisions', null, null], ['09b-owner-summary', null, nav(5)]]);
   await session(lang, mobile, '9800000031', null, [['10-field-role-refused', null, null]]);
 }

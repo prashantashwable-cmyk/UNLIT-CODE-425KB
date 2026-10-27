@@ -17,6 +17,9 @@ interface AppState {
   login(u: User): void;
   setRole(r: Role): void;
   logout(): void;
+  /** bumps when notifications change, so the top-bar count refreshes */
+  notifTick: number;
+  bumpNotif(): void;
   t(key: string, vars?: Record<string, string | number>): string;
 }
 
@@ -53,6 +56,7 @@ export function AppProvider({ children, api }: { children: ReactNode; api?: Api 
   const [scale, setScaleState] = useState<number>(() => load<number>('scale', 100));
   const [user, setUser] = useState<User | null>(null);
   const [role, setRoleState] = useState<Role | null>(null);
+  const [notifTick, setNotifTick] = useState(0);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -66,7 +70,8 @@ export function AppProvider({ children, api }: { children: ReactNode; api?: Api 
   }, [theme, scale, lang]);
 
   const value = useMemo<AppState>(() => ({
-    api: theApi, lang, theme, scale, user, role,
+    api: theApi, lang, theme, scale, user, role, notifTick,
+    bumpNotif: () => setNotifTick((n) => n + 1),
     setLang: (l) => { setLangState(l); save('lang', l); },
     setTheme: (t) => { setThemeState(t); save('theme', t); },
     setScale: (p) => { setScaleState(p); save('scale', p); },
@@ -75,7 +80,7 @@ export function AppProvider({ children, api }: { children: ReactNode; api?: Api 
     setRole: (r) => { if (WEB_ROLES.includes(r)) setRoleState(r); },
     logout: () => { setUser(null); setRoleState(null); },
     t: (key, vars) => translate(key, lang ?? 'mr', vars),
-  }), [theApi, lang, theme, scale, user, role]);
+  }), [theApi, lang, theme, scale, user, role, notifTick]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

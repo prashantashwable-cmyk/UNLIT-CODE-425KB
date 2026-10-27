@@ -1,3 +1,4 @@
+import type { EventClass, Priority, Receipt } from './notify';
 import type { SideState, Stage } from './stages';
 
 export type Role = 'admin' | 'owner' | 'customer' | 'technician' | 'qc' | 'rider' | 'sales' | 'backup_approver';
@@ -102,7 +103,7 @@ export interface Payment {
 export interface RuleSetting {
   key: string;
   value: number;
-  unit: 'days' | 'percent' | 'count' | 'ratio';
+  unit: 'days' | 'percent' | 'count' | 'ratio' | 'hour';
   min: number;
   max: number;
   version: number;
@@ -165,6 +166,35 @@ export interface RecoveryRequest {
   closeReason?: string;
 }
 
+/** One row of the notification outbox as its recipient sees it (SCR-013). */
+export interface AppNotification {
+  id: string;
+  at: string;
+  cls: EventClass;
+  priority: Priority;
+  textKey: string;
+  vars?: Record<string, string | number>;
+  /** route the item opens */
+  target: string;
+  /** set when quiet hours held it back; it is sent outside the app at this time */
+  heldUntil: string | null;
+  receipts: Receipt[];
+  /** nothing outside the app reached a critical item, so a person must phone */
+  humanTask: boolean;
+  acknowledgedAt: string | null;
+}
+
+export interface NotificationAuditRow {
+  id: string;
+  userName: string;
+  role: Role;
+  cls: EventClass;
+  priority: Priority;
+  at: string;
+  acknowledgedAt: string | null;
+  deletedAt: string | null;
+}
+
 export interface ExceptionItem {
   id: string;
   projectId: string;
@@ -225,4 +255,9 @@ export interface Api {
   markHelpContacted(user: User, role: Role, id: string): Promise<void>;
   verifyRecovery(user: User, role: Role, id: string): Promise<RecoveryRequest>;
   closeRecovery(user: User, role: Role, id: string, reason: string): Promise<RecoveryRequest>;
+  listNotifications(user: User, role: Role): Promise<AppNotification[]>;
+  acknowledgeNotification(user: User, role: Role, id: string): Promise<void>;
+  /** hides it from the list; the audit keeps it. Critical items must be acknowledged first. */
+  deleteNotification(user: User, role: Role, id: string): Promise<void>;
+  notificationAudit(user: User, role: Role): Promise<NotificationAuditRow[]>;
 }

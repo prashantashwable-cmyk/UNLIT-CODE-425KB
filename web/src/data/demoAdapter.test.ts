@@ -261,3 +261,72 @@ describe('account recovery is human-reviewed (SCR-019; part of T-008 and T-259: 
     expect(await code(a.closeRecovery(asha2, 'admin', r.id, 'mine'))).toBe('SELF_APPROVAL');
   });
 });
+
+describe('notification centre (SCR-013, NOTIFY_OUTBOX; T-256)', () => {
+  it('lists only your own notifications for the role you are in, newest first', async () => {
+    const a = createDemoApi();
+    const rahul = await a.login('9800000002', '123456');
+    const list = await a.listNotifications(rahul, 'admin');
+    expect(list.length).toBeGreaterThan(0);
+    expect([...list].sort((x, y) => y.at.localeCompare(x.at)).map((n) => n.id)).toEqual(list.map((n) => n.id));
+    const meera = await a.login('9800000021', '123456');
+    const mine = await a.listNotifications(meera, 'customer');
+    expect(mine.some((n) => list.some((m) => m.id === n.id))).toBe(false);
+    expect(await code(a.acknowledgeNotification(meera, 'customer', list[0].id))).toBe('NOT_FOUND');
+    const asha = await a.login('9800000001', '123456');            // Admin and Owner: separate lists per role
+    const asAdmin = await a.listNotifications(asha, 'admin');
+    const asOwner = await a.listNotifications(asha, 'owner');
+    expect(asOwner.some((n) => n.textKey === 'notif.weekly_summary')).toBe(true);
+    expect(asAdmin.some((n) => n.textKey === 'notif.weekly_summary')).toBe(false);
+    expect(await code(a.deleteNotification(asha, 'admin', asOwner[0].id))).toBe('NOT_FOUND');
+  });
+
+  it('T-256: a critical item stays until acknowledged; deleted items remain in the audit', async () => {
+    const a = createDemoApi();
+    const rahul = await a.login('9800000002', '123456');
+    const crit = (await a.listNotifications(rahul, 'admin')).find((n) => n.priority === 'critical')!;
+    expect(crit.acknowledgedAt).toBeNull();
+    expect(await code(a.deleteNotification(rahul, 'admin', crit.id))).toBe('ACK_REQUIRED');
+    await a.acknowledgeNotification(rahul, 'admin', crit.id);
+    await a.deleteNotification(rahul, 'admin', crit.id);
+    expect((await a.listNotifications(rahul, 'admin')).some((n) => n.id === crit.id)).toBe(false);
+    const audit = await a.notificationAudit(rahul, 'admin');
+    expect(audit.find((r) => r.id === crit.id)).toMatchObject({ userName: 'Rahul Deshmukh', priority: 'critical' });
+    expect(audit.find((r) => r.id === crit.id)!.deletedAt).not.toBeNull();
+    expect(audit.find((r) => r.id === crit.id)!.acknowledgedAt).not.toBeNull();
+    const meera = await a.login('9800000021', '123456');
+    expect(await code(a.notificationAudit(meera, 'customer'))).toBe('ROLE_NOT_ALLOWED');
+  });
+
+  it('a normal item can be deleted without acknowledging', async () => {
+    const a = createDemoApi();
+    const meera = await a.login('9800000021', '123456');
+    const n = (await a.listNotifications(meera, 'customer')).find((x) => x.priority === 'normal')!;
+    await a.deleteNotification(meera, 'customer', n.id);
+    expect((await a.listNotifications(meera, 'customer')).some((x) => x.id === n.id)).toBe(false);
+  });
+
+  it('delivery state is honest: no provider is connected, so a critical item becomes a call task for a person', async () => {
+    const a = createDemoApi();
+    const rahul = await a.login('9800000002', '123456');
+    const list = await a.listNotifications(rahul, 'admin');
+    const crit = list.find((n) => n.priority === 'critical')!;
+    expect(crit.receipts.length).toBeGreaterThan(0);
+    expect(crit.receipts.every((r) => r.state === 'not_connected')).toBe(true);
+    expect(crit.humanTask).toBe(true);
+    const held = list.find((n) => n.heldUntil !== null)!;          // a reminder raised at night
+    expect(held.cls).toBe('reminder');
+    expect(held.receipts.every((r) => r.at === held.heldUntil)).toBe(true);   // tried when quiet hours ended
+  });
+
+  it('quiet hours are settings with a placeholder source, whole hours only', async () => {
+    const a = createDemoApi();
+    const asha = await a.login('9800000001', '123456');
+    const rules = await a.listRules(asha, 'admin');
+    expect(rules.find((r) => r.key === 'quiet_hours_start')).toMatchObject({ value: 21, unit: 'hour', min: 0, max: 23 });
+    expect(rules.find((r) => r.key === 'quiet_hours_end')).toMatchObject({ value: 7, unit: 'hour' });
+    expect(rules.find((r) => r.key === 'quiet_hours_start')!.source).toMatch(/placeholder/i);
+    expect(await code(a.proposeRule(asha, 'admin', 'quiet_hours_start', 21.5, 'half past'))).toBe('VALUE_OUT_OF_RANGE');
+    expect(await code(a.proposeRule(asha, 'admin', 'duplicate_window_days', 30.5, 'half day'))).toBe('VALUE_OUT_OF_RANGE');
+  });
+});
