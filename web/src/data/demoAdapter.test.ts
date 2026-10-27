@@ -475,3 +475,41 @@ describe('slice 8 review fixes', () => {
   });
 });
 
+
+describe('pilot time zone and approval window are owner settings (invariant 8)', () => {
+  it('start at the stated defaults with sources, and show as UTC offset / hours', async () => {
+    const a = createDemoApi();
+    const asha = await a.login('9800000001', '123456');
+    const rules = await a.listRules(asha, 'admin');
+    expect(rules.find((r) => r.key === 'pilot_utc_offset_minutes')).toMatchObject({ value: 330, unit: 'utc_offset', min: -720, max: 840 });
+    expect(rules.find((r) => r.key === 'pilot_utc_offset_minutes')!.source).toMatch(/DEC-014/);
+    expect(rules.find((r) => r.key === 'approval_window_start')).toMatchObject({ value: 0, unit: 'hour' });
+    expect(rules.find((r) => r.key === 'approval_window_end')).toMatchObject({ value: 24, unit: 'hour', max: 24 });
+    expect(rules.find((r) => r.key === 'approval_window_start')!.source).toMatch(/placeholder/i);
+  });
+
+  it('an approved time-zone change moves quiet hours', async () => {
+    const at = () => new Date('2026-10-27T18:00:00.000Z');          // 23:30 IST, 18:00 UTC
+    const a = createDemoApi({ now: at });
+    const rahul = await a.login('9800000002', '123456');
+    const p = await a.proposeRule(rahul, 'admin', 'pilot_utc_offset_minutes', 0, 'Test in UTC');
+    const vikram = await a.login('9800000009', '123456');
+    await a.decideRuleProposal(vikram, 'owner', p.id, 'approved', p.version);
+    const meera = await a.login('9800000021', '123456');
+    await a.requestHelp(meera, 'customer', 'callback', 'payment', undefined);
+    const n = (await a.listNotifications(rahul, 'admin')).find((x) => x.textKey === 'notif.help_requested')!;
+    expect(n.heldUntil).toBeNull();                                  // 18:00 UTC is outside 21-07 quiet hours
+  });
+
+  it('an approval window outside the night holds approval notices until morning', async () => {
+    const a = createDemoApi({ now: () => new Date('2026-10-27T18:00:00.000Z') });   // 23:30 IST
+    const rahul = await a.login('9800000002', '123456');
+    const vikram = await a.login('9800000009', '123456');
+    const p = await a.proposeRule(rahul, 'admin', 'approval_window_end', 22, 'No approval pings after 10 pm');
+    await a.decideRuleProposal(vikram, 'owner', p.id, 'approved', p.version);
+    await a.proposeRule(rahul, 'admin', 'install_target_days', 15, 'Test');
+    // first notice was sent before the window changed (bypass); the second waits for the morning
+    const held = (await a.listNotifications(vikram, 'owner')).filter((x) => x.textKey === 'notif.rule_proposed').map((x) => x.heldUntil);
+    expect(held.sort()).toEqual(['2026-10-28T01:30:00.000Z', null].sort());
+  });
+});

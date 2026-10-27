@@ -2,7 +2,7 @@
 // (db/migrations/0004, 0005) so the UI behaves the same once the Supabase adapter replaces it. The database remains
 // the authority: these checks are for display only.
 import flagDefaults from '../../../config/flags.defaults.json';
-import { deliver, planDelivery, type Attempt, type EventClass, type Priority, type QuietHours } from './notify';
+import { deliver, planDelivery, type Attempt, type EventClass, type HourWindow, type Priority, type QuietHours } from './notify';
 import { STAGES, type Stage } from './stages';
 import {
   ApiError, type Api, type AppNotification, type Approval, type CallTask, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
@@ -11,8 +11,6 @@ import {
 } from './types';
 
 const DEMO_CODE = '123456';
-/** Asia/Kolkata: the Pune pilot (DEC-014). Quiet-hour times themselves are settings. */
-const PILOT_TZ_OFFSET_MIN = 330;
 /** No SMS, WhatsApp, email, push or call provider is connected in the demo (NEEDS_PROVIDER). */
 const noProvider: Attempt = () => 'not_connected';
 
@@ -122,6 +120,11 @@ function seed() {
     // §33 has quiet hours but no times: generic placeholder, changeable in settings.
     rule('quiet_hours_start', 21, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
     rule('quiet_hours_end', 7, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
+    // Quiet hours and windows are local to the pilot: India Standard Time, UTC+5:30 (AIEC-DEC-014 Pune pilot).
+    rule('pilot_utc_offset_minutes', 330, 'utc_offset', -720, 840, 'AIEC-DEC-014 (Pune pilot: IST, UTC+5:30)'),
+    // §33 "bypass during delivery window" with no window given: all day keeps approvals flowing; owner can narrow it.
+    rule('approval_window_start', 0, 'hour', 0, 23, 'Generic placeholder (§33: delivery window not defined; all day)'),
+    rule('approval_window_end', 24, 'hour', 1, 24, 'Generic placeholder (§33: delivery window not defined; all day)'),
   ];
   const notifications: StoredNotification[] = [];
   const callTasks: StoredCallTask[] = [];
@@ -158,7 +161,7 @@ interface NotificationEvent {
 // Live ids use their own prefix and only grow (rows are never removed), so they cannot collide with seed ids.
 function enqueue(o: Outbox, e: NotificationEvent, id = `nl${o.notifications.length + 1}`): boolean {
   if (o.notifications.some((n) => n.userId === e.userId && n.role === e.role && n.dedupeKey === e.dedupeKey)) return false;
-  const plan = planDelivery(e.cls, e.priority, new Date(e.at), quietHours(o.rules));
+  const plan = planDelivery(e.cls, e.priority, new Date(e.at), quietHours(o.rules), { approvalWindow: approvalWindow(o.rules) });
   const out = deliver(plan, noProvider, e.at);
   const n: StoredNotification = { id, userId: e.userId, role: e.role, cls: e.cls, priority: plan.priority, at: e.at, textKey: e.textKey,
     vars: e.vars, target: e.target, heldUntil: plan.deferredUntil, receipts: out.receipts, humanTask: out.humanTask,
@@ -181,14 +184,19 @@ function targetForRequester(role: Role): string {
 
 function quietHours(rules: RuleSetting[]): QuietHours {
   const v = (key: string) => rules.find((r) => r.key === key)!.value;
-  return { startHour: v('quiet_hours_start'), endHour: v('quiet_hours_end'), tzOffsetMinutes: PILOT_TZ_OFFSET_MIN };
+  return { startHour: v('quiet_hours_start'), endHour: v('quiet_hours_end'), tzOffsetMinutes: v('pilot_utc_offset_minutes') };
+}
+
+function approvalWindow(rules: RuleSetting[]): HourWindow {
+  const v = (key: string) => rules.find((r) => r.key === key)!.value;
+  return { startHour: v('approval_window_start'), endHour: v('approval_window_end') };
 }
 
 function publicCallTask({ userId, ...rest }: StoredCallTask, viewer: User): CallTask {
   return { ...rest, isMine: userId === viewer.id, attempts: rest.attempts.map(({ byUserId: _b, ...x }) => ({ ...x })) };
 }
 
-const WHOLE_UNITS: readonly RuleSetting['unit'][] = ['days', 'count', 'hour'];
+const WHOLE_UNITS: readonly RuleSetting['unit'][] = ['days', 'count', 'hour', 'utc_offset'];
 
 function canSee(user: User, role: Role, p: Project): boolean {
   if (role === 'admin') return true;   // Owner: summary only (matrix), no project rows

@@ -83,3 +83,20 @@ describe('T-086: push fails, critical falls back, every attempt leaves a receipt
     expect(out.humanTask).toBe(false);
   });
 });
+
+describe('approval delivery window (§33 "bypass during delivery window"; setting, default all day)', () => {
+  it('inside the window an approval skips quiet hours; outside it waits like a reminder', () => {
+    const allDay = { startHour: 0, endHour: 24 };
+    const day = { startHour: 8, endHour: 22 };
+    expect(planDelivery('approval', 'critical', night, quiet, { approvalWindow: allDay }).deferredUntil).toBeNull();
+    expect(planDelivery('approval', 'critical', night, quiet, { approvalWindow: day }).deferredUntil).toBe('2026-10-28T01:30:00.000Z');
+    expect(planDelivery('approval', 'normal', noon, quiet, { approvalWindow: day }).deferredUntil).toBeNull();   // not quiet anyway
+    expect(planDelivery('approval', 'critical', night, quiet, { approvalWindow: { startHour: 22, endHour: 2 } }).deferredUntil).toBeNull();
+    // start = end means no window: approvals then wait like everything else
+    expect(planDelivery('approval', 'critical', night, quiet, { approvalWindow: { startHour: 8, endHour: 8 } }).deferredUntil).not.toBeNull();
+  });
+
+  it('SOS ignores the window', () => {
+    expect(planDelivery('sos', 'critical', night, quiet, { approvalWindow: { startHour: 8, endHour: 9 } }).deferredUntil).toBeNull();
+  });
+});

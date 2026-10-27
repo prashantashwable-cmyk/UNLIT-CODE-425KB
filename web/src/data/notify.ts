@@ -8,6 +8,8 @@ export type DeliveryState = 'delivered' | 'failed' | 'not_connected';
 export type Attempt = (channel: Channel) => DeliveryState;
 
 export interface QuietHours { startHour: number; endHour: number; tzOffsetMinutes: number }
+/** Local hours [start, end) in which approval notices may skip quiet hours; 0-24 = all day, start = end = never. */
+export interface HourWindow { startHour: number; endHour: number }
 export interface Receipt { channel: Channel; state: DeliveryState; at: string }
 export interface DeliveryPlan { cls: EventClass; priority: Priority; channels: Channel[]; deferredUntil: string | null }
 
@@ -24,11 +26,19 @@ const CHANNELS: Record<EventClass, Channel[]> = {
 /** §33 "Native push + SMS + call route": every channel at once, never stopping at the first that works. */
 const ALL_CHANNELS: readonly EventClass[] = ['sos'];
 
-/** §33 "Bypass" classes. Approvals: "bypass during delivery window" (INFERENCE: treated as bypass until the window is set). */
-const BYPASS: readonly EventClass[] = ['sos', 'approval'];
+/** §33: SOS always bypasses quiet hours; approvals bypass "during delivery window" (a setting; see planDelivery). */
+const BYPASS: readonly EventClass[] = ['sos'];
+const ALL_DAY: HourWindow = { startHour: 0, endHour: 24 };
 
 function localMinutes(now: Date, tzOffsetMinutes: number): number {
   return (((now.getUTCHours() * 60 + now.getUTCMinutes() + tzOffsetMinutes) % 1440) + 1440) % 1440;
+}
+
+function inWindow(m: number, w: HourWindow): boolean {
+  const s = w.startHour * 60;
+  const e = w.endHour * 60;
+  if (s === e) return false;
+  return s < e ? m >= s && m < e : m >= s || m < e;
 }
 
 export function inQuietHours(now: Date, q: QuietHours): boolean {
@@ -49,10 +59,11 @@ function quietEnd(now: Date, q: QuietHours): string {
 }
 
 export function planDelivery(cls: EventClass, priority: Priority, now: Date, q: QuietHours,
-                             opts: { marketingOptIn?: boolean } = {}): DeliveryPlan {
+                             opts: { marketingOptIn?: boolean; approvalWindow?: HourWindow } = {}): DeliveryPlan {
   const p: Priority = cls === 'sos' ? 'critical' : priority;   // SOS is always critical
   const channels = cls === 'marketing' && !opts.marketingOptIn ? [] : [...CHANNELS[cls]];
-  const bypass = BYPASS.includes(cls) || (cls === 'payment' && p === 'critical');
+  const inApprovalWindow = cls === 'approval' && inWindow(localMinutes(now, q.tzOffsetMinutes), opts.approvalWindow ?? ALL_DAY);
+  const bypass = BYPASS.includes(cls) || inApprovalWindow || (cls === 'payment' && p === 'critical');
   return { cls, priority: p, channels, deferredUntil: !bypass && inQuietHours(now, q) ? quietEnd(now, q) : null };
 }
 

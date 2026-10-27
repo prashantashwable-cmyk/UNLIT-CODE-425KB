@@ -103,7 +103,7 @@ export interface Payment {
 export interface RuleSetting {
   key: string;
   value: number;
-  unit: 'days' | 'percent' | 'count' | 'ratio' | 'hour';
+  unit: 'days' | 'percent' | 'count' | 'ratio' | 'hour' | 'utc_offset';
   min: number;
   max: number;
   version: number;

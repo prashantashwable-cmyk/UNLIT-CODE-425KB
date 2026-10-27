@@ -19,9 +19,16 @@ function useRuleData() {
   return { data, reload };
 }
 
+/** 330 -> "UTC+5:30" (minutes east of UTC). */
+export function utcOffset(minutes: number): string {
+  const a = Math.abs(minutes);
+  return `UTC${minutes < 0 ? '−' : '+'}${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}`;
+}
+
 function useFormat() {
   const { t } = useApp();
-  return (r: { unit: RuleSetting['unit'] }, v: number) => t(`unit.${r.unit}`, { n: v });
+  return (r: { unit: RuleSetting['unit'] }, v: number) =>
+    r.unit === 'utc_offset' ? utcOffset(v) : t(`unit.${r.unit}`, { n: v });
 }
 
 function ProposeForm({ rules, onDone }: { rules: RuleSetting[]; onDone(): void }) {

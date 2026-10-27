@@ -137,3 +137,12 @@ describe('Rules and settings (SCR-079): Admin proposes, Owner approves', () => {
     expect(screen.getByRole('heading', { name: 'Your lift' })).toBeInTheDocument();
   });
 });
+
+describe('time settings display (slice 9)', () => {
+  it('formats a UTC offset for people, not as raw minutes', async () => {
+    const { utcOffset } = await import('./Rules');
+    expect(utcOffset(330)).toBe('UTC+5:30');
+    expect(utcOffset(0)).toBe('UTC+0:00');
+    expect(utcOffset(-210)).toBe('UTC−3:30');
+  });
+});
