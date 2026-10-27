@@ -155,7 +155,8 @@ interface NotificationEvent {
 }
 
 /** Outbox write (WF-18): plan against quiet hours, try channels, keep receipts, raise a call task when nobody was reached. */
-function enqueue(o: Outbox, e: NotificationEvent, id = `n${o.notifications.length + 1}`): boolean {
+// Live ids use their own prefix and only grow (rows are never removed), so they cannot collide with seed ids.
+function enqueue(o: Outbox, e: NotificationEvent, id = `nl${o.notifications.length + 1}`): boolean {
   if (o.notifications.some((n) => n.userId === e.userId && n.role === e.role && n.dedupeKey === e.dedupeKey)) return false;
   const plan = planDelivery(e.cls, e.priority, new Date(e.at), quietHours(o.rules));
   const out = deliver(plan, noProvider, e.at);
@@ -170,6 +171,12 @@ function enqueue(o: Outbox, e: NotificationEvent, id = `n${o.notifications.lengt
 /** Everyone holding one of the roles, as (user, role) pairs, minus the excluded person. */
 function holders(roles: readonly Role[], exceptUserId: string | null): { userId: string; role: Role }[] {
   return users.flatMap((u) => u.id === exceptUserId ? [] : roles.filter((r) => u.roles.includes(r)).map((role) => ({ userId: u.id, role })));
+}
+
+/** A screen the requester's role can open: approvers see the inbox, customers their lift, field roles their own home. */
+function targetForRequester(role: Role): string {
+  if (role === 'admin' || role === 'owner' || role === 'backup_approver') return '/admin/approvals';
+  return role === 'customer' ? '/c/progress' : '/today';
 }
 
 function quietHours(rules: RuleSetting[]): QuietHours {
@@ -276,7 +283,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       a.version += 1;
       a.decidedByName = user.name;
       a.decidedRole = role;
-      a.decidedAt = new Date().toISOString();
+      a.decidedAt = now().toISOString();
       a.decisionReason = reason?.trim() || undefined;
       // Every decision is on the project timeline; an override is loud (red, with its reason).
       const red = a.kind === 'override';
@@ -285,7 +292,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
         textKey: `timeline.${red ? 'override' : 'approval'}_${decision}`, reason: a.reason ?? undefined, red,
       });
       emit({ userId: a.requestedBy, role: a.requestedRole, cls: 'approval', priority: 'normal', textKey: 'notif.approval_decided',
-             target: a.requestedRole === 'customer' ? '/c/progress' : '/admin/approvals', dedupeKey: `approval:${a.id}:v${a.version}`,
+             target: targetForRequester(a.requestedRole), dedupeKey: `approval:${a.id}:v${a.version}`,
              vars: { code: a.projectCode, decision, by: user.name } });
       return { ...a };
     },
@@ -310,7 +317,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       const p = db.projects.find((x) => x.id === projectId);
       if (!p || !canSee(user, role, p)) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
       if (!text.trim()) throw new ApiError('MESSAGE_EMPTY', 'chat.empty');
-      const m: ChatMessage = { id: `m${db.messages.length + 1}`, projectId, at: new Date().toISOString(), kind: 'message',
+      const m: ChatMessage = { id: `m${db.messages.length + 1}`, projectId, at: now().toISOString(), kind: 'message',
         authorName: user.name, authorRole: role, text: text.trim() };
       db.messages.push(m);
       return m;
@@ -344,7 +351,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       // One open proposal per setting, so approving an old one cannot overwrite a newer one.
       if (db.proposals.some((x) => x.key === key && x.status === 'requested')) throw new ApiError('RULE_PENDING', 'rules.pending_exists');
       const p: RuleProposal = { id: `rp${db.proposals.length + 1}`, key, from: r.value, to: value, reason: reason.trim(),
-        proposedBy: user.id, proposedByName: user.name, status: 'requested', version: 1, createdAt: new Date().toISOString() };
+        proposedBy: user.id, proposedByName: user.name, status: 'requested', version: 1, createdAt: now().toISOString() };
       db.proposals.unshift(p);
       for (const h of holders(['owner'], user.id)) {
         emit({ ...h, cls: 'approval', priority: 'normal', textKey: 'notif.rule_proposed', target: '/admin/rules',
@@ -369,7 +376,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
         const r = db.rules.find((x) => x.key === p.key)!;
         r.value = p.to;
         r.version += 1;
-        r.history.push({ version: r.version, value: p.to, at: new Date().toISOString(), byName: `${p.proposedByName} → ${user.name}`, reason: p.reason });
+        r.history.push({ version: r.version, value: p.to, at: now().toISOString(), byName: `${p.proposedByName} → ${user.name}`, reason: p.reason });
       }
       emit({ userId: p.proposedBy, role: 'admin', cls: 'approval', priority: 'normal', textKey: 'notif.rule_decided', target: '/admin/rules',
              dedupeKey: `rule:${p.id}:v${p.version}`, vars: { decision, by: user.name } });
@@ -385,7 +392,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
     async requestHelp(user, role, kind, topic, note) {
       hold(user, role);
       const h: HelpRequest = { id: `h${db.help.length + 1}`, userName: user.name, role, kind, topic,
-        note: note?.trim() || null, at: new Date().toISOString(), status: 'open' };
+        note: note?.trim() || null, at: now().toISOString(), status: 'open' };
       db.help.unshift(h);
       // INFERENCE: §33 has no row for help requests; treated as a reminder (held during quiet hours, no time promise).
       for (const a of holders(['admin'], user.id)) {
@@ -408,8 +415,8 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       }
       db.recoveries.unshift({ id: `r${db.recoveries.length + 1}`, userId, userName: target?.name ?? null,
         phoneMasked: digits.length === 10 ? `+91 ${digits.slice(0, 2)}•• ••${digits.slice(-2)}` : '—', reason,
-        at: new Date().toISOString(), status: 'waiting',
-        reviewersNeeded: target?.roles.includes('admin') ? 2 : 1,   // T-259: Admin accounts need two reviewers
+        at: now().toISOString(), status: 'waiting',
+        reviewersNeeded: target?.roles.some((r) => r === 'admin' || r === 'owner') ? 2 : 1,   // SCR-019: Admin/Owner accounts need two reviewers
         reviewerNames: [], reviewerIds: [] });
       if (userId) for (const h of holders(RECOVERY_REVIEWERS, userId)) emit(recoveryNotice(h, db.recoveries[0]));
       return 'received';
@@ -478,14 +485,14 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       hold(user, role);
       const n = db.notifications.find((x) => x.id === id && x.userId === user.id && x.role === role && !x.deletedAt);
       if (!n) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
-      n.acknowledgedAt ??= new Date().toISOString();
+      n.acknowledgedAt ??= now().toISOString();
     },
     async deleteNotification(user, role, id) {
       hold(user, role);
       const n = db.notifications.find((x) => x.id === id && x.userId === user.id && x.role === role && !x.deletedAt);
       if (!n) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
       if (n.priority === 'critical' && !n.acknowledgedAt) throw new ApiError('ACK_REQUIRED', 'notif.ack_first');
-      n.deletedAt = new Date().toISOString();
+      n.deletedAt = now().toISOString();
     },
     async notificationAudit(user, role) {
       hold(user, role);
@@ -509,7 +516,7 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       if (c.userId === user.id) throw new ApiError('OWN_TASK', 'calls.own_task');
       if (c.status === 'done') throw new ApiError('TASK_DONE', 'calls.already_done');
       // append-only attempt log with who (id + role) and when
-      c.attempts.push({ at: new Date().toISOString(), byUserId: user.id, byName: user.name, byRole: role, outcome, note: note.trim() || null });
+      c.attempts.push({ at: now().toISOString(), byUserId: user.id, byName: user.name, byRole: role, outcome, note: note.trim() || null });
       if (outcome === 'reached') c.status = 'done';
       return publicCallTask(c, user);
     },

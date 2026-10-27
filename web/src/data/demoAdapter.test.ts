@@ -437,3 +437,41 @@ describe('live notifications from app events go through the outbox (WF-18, AUT-0
     expect(audit.some((r) => r.userName === 'Rahul Deshmukh' && r.cls === 'approval' && r.at === '2026-10-27T06:30:00.000Z')).toBe(false);
   });
 });
+
+describe('slice 8 review fixes', () => {
+  const noonIst = () => new Date('2026-10-27T06:30:00.000Z');
+
+  it("a field requester's notice opens their own home, never a page their role cannot open", async () => {
+    const a = createDemoApi({ now: noonIst });
+    const rahul = await a.login('9800000002', '123456');
+    const [qc] = (await a.listApprovals(rahul, 'admin')).filter((x) => x.id === 'a1');
+    await a.decideApproval(rahul, 'admin', 'a1', 'approved', qc.version);
+    const sunil = await a.login('9800000031', '123456');
+    const n = (await a.listNotifications(sunil, 'technician')).find((x) => x.textKey === 'notif.approval_decided')!;
+    expect(n.target).toBe('/today');
+  });
+
+  it('live notification ids never collide with seeded ones, so acknowledging hits the right item', async () => {
+    const a = createDemoApi({ now: noonIst });
+    const meera = await a.login('9800000021', '123456');
+    for (let i = 0; i < 40; i++) await a.requestHelp(meera, 'customer', 'callback', 'payment', undefined);
+    const asha = await a.login('9800000001', '123456');
+    const all = await a.notificationAudit(asha, 'admin');
+    expect(new Set(all.map((r) => r.id)).size).toBe(all.length);
+  });
+
+  it('SCR-019: an Owner account also needs two reviewers', async () => {
+    const a = createDemoApi({ now: noonIst });
+    await a.startRecovery('9800000009', 'lost_phone');               // Vikram, Owner only
+    const rahul = await a.login('9800000002', '123456');
+    expect((await a.listSupport(rahul, 'admin')).recoveries[0].reviewersNeeded).toBe(2);
+  });
+
+  it('records use the injected clock', async () => {
+    const a = createDemoApi({ now: noonIst });
+    const meera = await a.login('9800000021', '123456');
+    const h = await a.requestHelp(meera, 'customer', 'callback', 'payment', undefined);
+    expect(h.at).toBe('2026-10-27T06:30:00.000Z');
+  });
+});
+
