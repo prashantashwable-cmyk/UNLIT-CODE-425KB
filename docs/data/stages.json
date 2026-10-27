@@ -1,0 +1,130 @@
+[
+ {
+  "#": "1",
+  "Stage": "Lead captured",
+  "Owner": "Rider",
+  "Gate to move on (proof)": "≥3 in-app stamped photos, number confirmed, consent recorded",
+  "Money event": "Rider verified-lead amount after stage 2 (amount undefined)",
+  "Time limit": "Same day"
+ },
+ {
+  "#": "2",
+  "Stage": "Lead verified",
+  "Owner": "System, then Sales",
+  "Gate to move on (proof)": "Not duplicate (or attached), AI check passed, geofence OK or manual review",
+  "Money event": "—",
+  "Time limit": "24 h"
+ },
+ {
+  "#": "3",
+  "Stage": "Contacted",
+  "Owner": "Sales bot",
+  "Gate to move on (proof)": "Consent present, template sent, reply logged, requirement captured",
+  "Money event": "—",
+  "Time limit": "48 h"
+ },
+ {
+  "#": "4",
+  "Stage": "Quoted/negotiated",
+  "Owner": "Bot → Negotiator",
+  "Gate to move on (proof)": "Price ≥ role floor accepted; quote subject to measured spec",
+  "Money event": "—",
+  "Time limit": "7 days then cold"
+ },
+ {
+  "#": "5",
+  "Stage": "Agreement and token",
+  "Owner": "Customer signatory",
+  "Gate to move on (proof)": "e-stamp, eSign, authority proof, token confirmed",
+  "Money event": "Token received; commission pending",
+  "Time limit": "3 days"
+ },
+ {
+  "#": "6",
+  "Stage": "Site readiness",
+  "Owner": "Customer",
+  "Gate to move on (proof)": "Readiness photos per SOP",
+  "Money event": "—",
+  "Time limit": "30 days"
+ },
+ {
+  "#": "7",
+  "Stage": "QC clearance + variation check",
+  "Owner": "QC",
+  "Gate to move on (proof)": "Measurements verified; variation signed if >threshold; drawings released",
+  "Money event": "Main rider commission paid",
+  "Time limit": "48 h after readiness"
+ },
+ {
+  "#": "8",
+  "Stage": "Permit applied",
+  "Owner": "Admin (licensed contractor)",
+  "Gate to move on (proof)": "Erection permission filed; number saved",
+  "Money event": "—",
+  "Time limit": "7 days"
+ },
+ {
+  "#": "9",
+  "Stage": "Production order",
+  "Owner": "Supplier",
+  "Gate to move on (proof)": "PO accepted on confirmed spec + variation; permit number",
+  "Money event": "PO issued",
+  "Time limit": "As agreed"
+ },
+ {
+  "#": "10",
+  "Stage": "Dispatch",
+  "Owner": "Supplier",
+  "Gate to move on (proof)": "Funds gate satisfied (DEC-004); packed against BOM; sealed",
+  "Money event": "70% held",
+  "Time limit": "—"
+ },
+ {
+  "#": "11",
+  "Stage": "Container delivery",
+  "Owner": "Rep + Technician + Admin",
+  "Gate to move on (proof)": "3 keys + CCTV; BOM check; custody signed",
+  "Money event": "Escrow released to company; supplier paid its standard-material share by split (provider terms ⚠️)",
+  "Time limit": "Same day else return"
+ },
+ {
+  "#": "12",
+  "Stage": "Cabin delivery",
+  "Owner": "Customer rep",
+  "Gate to move on (proof)": "20% gate (DEC-019); delivered; signed",
+  "Money event": "20% released",
+  "Time limit": "Same day"
+ },
+ {
+  "#": "13",
+  "Stage": "Installation",
+  "Owner": "Technician team",
+  "Gate to move on (proof)": "Daily safety gate; every SOP step proved; peer/QC check",
+  "Money event": "Provisional earnings",
+  "Time limit": "14 days (DEC-022)"
+ },
+ {
+  "#": "14",
+  "Stage": "QC and Inspector",
+  "Owner": "QC, Electrical Inspector",
+  "Gate to move on (proof)": "QC pass; safety-critical items signed by qualified human; Inspector passed",
+  "Money event": "Earnings → Confirmed (with Admin approval)",
+  "Time limit": "QC 72 h"
+ },
+ {
+  "#": "15",
+  "Stage": "Licence",
+  "Owner": "Admin",
+  "Gate to move on (proof)": "Licence number, holder, renewal date stored",
+  "Money event": "—",
+  "Time limit": "30 days"
+ },
+ {
+  "#": "16",
+  "Stage": "Handover",
+  "Owner": "Rep + Technician + QC",
+  "Gate to move on (proof)": "Three eSignatures; final 10% confirmed; NOC per definition; AMC and QR",
+  "Money event": "10% in",
+  "Time limit": "Same visit"
+ }
+]

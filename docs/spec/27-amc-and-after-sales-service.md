@@ -1,0 +1,3 @@
+## 27. AMC and after-sales service
+
+AMC profile is created only after licence, handover signatures and final payment per rules. Includes contract dates, schedule, renewal reminders, warranty/AMC coverage, tickets, technician dispatch, visit evidence, parts/cost, SLA tracking and escalation. Severity levels: **trapped person**, unsafe operation, breakdown, repeat fault, routine. Trapped person bypasses bots and routes to a human rescue line; emergency rescue is separate from maintenance. The AMC agreement must define service hours, emergency commitments, exclusions, payment terms, escalation contact, and who owns licence renewal and annual inspection (⚖️).
