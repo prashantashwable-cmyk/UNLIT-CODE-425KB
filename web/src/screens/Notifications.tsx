@@ -5,6 +5,12 @@ import { Button, Notice, formatTime } from '../components/ui';
 import type { AppNotification } from '../data/types';
 import { useApp } from '../state/app';
 
+/** A decision travels as a code ('approved' | 'rejected') and is shown in the reader's language. */
+function localVars(vars: AppNotification['vars'], t: (k: string) => string) {
+  if (!vars || typeof vars.decision !== 'string') return vars;
+  return { ...vars, decision: t(`notif.decision_${vars.decision}`) };
+}
+
 // SCR-013: chronological list with priority icon, text, delivery state; tap opens the target screen.
 export function NotificationsScreen() {
   const { t, api, user, role, lang, bumpNotif } = useApp();
@@ -42,7 +48,7 @@ export function NotificationsScreen() {
                   </span>
                   <span className="muted">{formatTime(n.at, l)}</span>
                 </div>
-                <p className="notif-text">{t(n.textKey, n.vars)}</p>
+                <p className="notif-text">{t(n.textKey, localVars(n.vars, t))}</p>
                 <div className="muted notif-delivery">
                   {t('notif.in_app')}
                   {n.receipts.map((r) => ` · ${t(`notif.channel_${r.channel}`)}: ${t(`notif.state_${r.state}`)}`)}

@@ -73,3 +73,23 @@ describe('Notification centre (SCR-013; T-256 UI part)', () => {
     expect(screen.queryByText(/Override needs your decision/)).toBeNull();
   });
 });
+
+describe('live notifications in the centre (slice 8)', () => {
+  it('a decision on your request arrives in your language with the decision translated', async () => {
+    renderApp();
+    await login('9800000002');                                         // Rahul approves Asha's override
+    fireEvent.click(await screen.findByRole('link', { name: /Approvals inbox/ }));
+    const card = (await screen.findByText('PUN-0006')).closest('.card, article, section, li')!;
+    await act(async () => { fireEvent.click(within(card as HTMLElement).getByRole('button', { name: 'Approve' })); });
+    fireEvent.click(screen.getByRole('link', { name: /^☺?\s*Me$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '9800000001' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send code' }));
+    fireEvent.change(screen.getByLabelText('6-digit code'), { target: { value: '123456' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Log in' })); });
+    fireEvent.click(await screen.findByRole('button', { name: 'Admin' }));
+    fireEvent.change(screen.getByLabelText(/Language|भाषा/), { target: { value: 'mr' } });
+    fireEvent.click(await screen.findByRole('link', { name: /सूचना/ }));
+    expect(await screen.findByText('PUN-0006: Rahul Deshmukh यांनी तुमची विनंती मंजूर केली')).toBeInTheDocument();
+  });
+});

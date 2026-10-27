@@ -381,3 +381,59 @@ describe('call tasks never deadlock (same reviewer set as recovery: Admin, Owner
   });
 });
 
+
+describe('live notifications from app events go through the outbox (WF-18, AUT-031)', () => {
+  const noonIst = () => new Date('2026-10-27T06:30:00.000Z');
+  const nightIst = () => new Date('2026-10-27T18:00:00.000Z');       // 23:30 IST
+  const keys = async (a: ReturnType<typeof createDemoApi>, phone: string, role: Parameters<ReturnType<typeof createDemoApi>['listNotifications']>[1]) =>
+    (await a.listNotifications(await a.login(phone, '123456'), role)).map((n) => n.textKey);
+
+  it('a decision tells the requester, in the role they asked in, and opens the right screen', async () => {
+    const a = createDemoApi({ now: noonIst });
+    const rahul = await a.login('9800000002', '123456');
+    const [ov] = (await a.listApprovals(rahul, 'admin')).filter((x) => x.id === 'a2');
+    await a.decideApproval(rahul, 'admin', 'a2', 'approved', ov.version);
+    const asha = await a.login('9800000001', '123456');
+    const n = (await a.listNotifications(asha, 'admin')).find((x) => x.textKey === 'notif.approval_decided')!;
+    expect(n).toMatchObject({ vars: { code: 'PUN-0006', decision: 'approved', by: 'Rahul Deshmukh' }, target: '/admin/approvals' });
+    expect(n.at).toBe('2026-10-27T06:30:00.000Z');
+    const [cx] = (await a.listApprovals(rahul, 'admin')).filter((x) => x.id === 'a3');
+    await a.decideApproval(rahul, 'admin', 'a3', 'rejected', cx.version, 'Work already started');
+    const meera = (await a.listNotifications(await a.login('9800000021', '123456'), 'customer')).find((x) => x.textKey === 'notif.approval_decided')!;
+    expect(meera).toMatchObject({ target: '/c/progress', vars: { decision: 'rejected' } });
+  });
+
+  it('a setting proposal tells every Owner except the proposer; the decision tells the proposer', async () => {
+    const a = createDemoApi({ now: noonIst });
+    const asha = await a.login('9800000001', '123456');            // Admin + Owner
+    const p = await a.proposeRule(asha, 'admin', 'install_target_days', 21, 'Monsoon');
+    expect(await keys(a, '9800000009', 'owner')).toContain('notif.rule_proposed');
+    expect(await keys(a, '9800000001', 'owner')).not.toContain('notif.rule_proposed');
+    const vikram = await a.login('9800000009', '123456');
+    await a.decideRuleProposal(vikram, 'owner', p.id, 'approved', p.version);
+    expect(await keys(a, '9800000001', 'admin')).toContain('notif.rule_decided');
+  });
+
+  it('a help request reaches every Admin; at night it is held until quiet hours end', async () => {
+    const a = createDemoApi({ now: nightIst });
+    const meera = await a.login('9800000021', '123456');
+    await a.requestHelp(meera, 'customer', 'callback', 'payment', undefined);
+    for (const phone of ['9800000001', '9800000002']) {
+      const n = (await a.listNotifications(await a.login(phone, '123456'), 'admin')).find((x) => x.textKey === 'notif.help_requested')!;
+      expect(n).toMatchObject({ vars: { name: 'Meera Patil' }, heldUntil: '2026-10-28T01:30:00.000Z', receipts: [] });
+    }
+  });
+
+  it('starting recovery twice tells each reviewer once (dedupe key), never the person being recovered', async () => {
+    const a = createDemoApi({ now: noonIst });
+    await a.startRecovery('9800000002', 'lost_phone');
+    await a.startRecovery('9800000002', 'lost_phone');
+    const rahulAfter = await a.login('9800000001', '123456');
+    expect((await a.listSupport(rahulAfter, 'admin')).recoveries).toHaveLength(1);   // one request, not two
+    for (const [phone, role] of [['9800000001', 'admin'], ['9800000001', 'owner'], ['9800000009', 'owner']] as const) {
+      expect((await keys(a, phone, role)).filter((k) => k === 'notif.recovery_started')).toHaveLength(1);
+    }
+    const audit = await a.notificationAudit(rahulAfter, 'admin');
+    expect(audit.some((r) => r.userName === 'Rahul Deshmukh' && r.cls === 'approval' && r.at === '2026-10-27T06:30:00.000Z')).toBe(false);
+  });
+});

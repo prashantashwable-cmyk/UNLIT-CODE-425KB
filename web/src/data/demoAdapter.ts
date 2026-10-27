@@ -16,7 +16,7 @@ const PILOT_TZ_OFFSET_MIN = 330;
 /** No SMS, WhatsApp, email, push or call provider is connected in the demo (NEEDS_PROVIDER). */
 const noProvider: Attempt = () => 'not_connected';
 
-type StoredNotification = AppNotification & { userId: string; role: Role; deletedAt: string | null; sent: boolean };
+type StoredNotification = AppNotification & { userId: string; role: Role; deletedAt: string | null; sent: boolean; dedupeKey: string };
 type StoredCallTask = Omit<CallTask, 'isMine' | 'attempts'> & { userId: string; attempts: (CallTask['attempts'][number] & { byUserId: string })[] };
 
 function callTaskFor(n: StoredNotification, id: string, at: string): StoredCallTask {
@@ -126,15 +126,8 @@ function seed() {
   const notifications: StoredNotification[] = [];
   const callTasks: StoredCallTask[] = [];
   const notify = (id: string, userId: string, role: Role, cls: EventClass, priority: Priority, at: string, textKey: string,
-                  target: string, vars?: Record<string, string | number>) => {
-    const plan = planDelivery(cls, priority, new Date(at), quietHours(rules));
-    const out = deliver(plan, noProvider, at);
-    const n: StoredNotification = { id, userId, role, cls, priority: plan.priority, at, textKey, vars, target,
-      heldUntil: plan.deferredUntil, receipts: out.receipts, humanTask: out.humanTask, acknowledgedAt: null, deletedAt: null,
-      sent: !plan.deferredUntil };
-    notifications.push(n);
-    if (out.humanTask) callTasks.push(callTaskFor(n, `ct${callTasks.length + 1}`, at));
-  };
+                  target: string, vars?: Record<string, string | number>) =>
+    enqueue({ notifications, callTasks, rules }, { userId, role, cls, priority, at, textKey, target, vars, dedupeKey: `seed:${id}` }, id);
   // Approvers other than the requester (Asha asked for a2, so she is not told to decide it).
   notify('n1', 'u-admin2', 'admin', 'approval', 'critical', '2026-10-27T04:10:00.000Z', 'notif.override_needed', '/admin/approvals', { code: 'PUN-0006' });
   notify('n2', 'u-owner', 'owner', 'approval', 'critical', '2026-10-27T04:10:00.000Z', 'notif.override_needed', '/admin/approvals', { code: 'PUN-0006' });
@@ -151,6 +144,32 @@ function seed() {
   const help: HelpRequest[] = [];
   const recoveries: (RecoveryRequest & { userId: string | null; reviewerIds: string[] })[] = [];
   return { projects, approvals, timelines, payments, messages, rules, proposals, help, recoveries, notifications, callTasks };
+}
+
+interface Outbox { notifications: StoredNotification[]; callTasks: StoredCallTask[]; rules: RuleSetting[] }
+interface NotificationEvent {
+  userId: string; role: Role; cls: EventClass; priority: Priority; at: string; textKey: string; target: string;
+  vars?: Record<string, string | number>;
+  /** AUT-031 dedupe: the same event for the same person and role is queued once */
+  dedupeKey: string;
+}
+
+/** Outbox write (WF-18): plan against quiet hours, try channels, keep receipts, raise a call task when nobody was reached. */
+function enqueue(o: Outbox, e: NotificationEvent, id = `n${o.notifications.length + 1}`): boolean {
+  if (o.notifications.some((n) => n.userId === e.userId && n.role === e.role && n.dedupeKey === e.dedupeKey)) return false;
+  const plan = planDelivery(e.cls, e.priority, new Date(e.at), quietHours(o.rules));
+  const out = deliver(plan, noProvider, e.at);
+  const n: StoredNotification = { id, userId: e.userId, role: e.role, cls: e.cls, priority: plan.priority, at: e.at, textKey: e.textKey,
+    vars: e.vars, target: e.target, heldUntil: plan.deferredUntil, receipts: out.receipts, humanTask: out.humanTask,
+    acknowledgedAt: null, deletedAt: null, sent: !plan.deferredUntil, dedupeKey: e.dedupeKey };
+  o.notifications.push(n);
+  if (out.humanTask) o.callTasks.push(callTaskFor(n, `ct${o.callTasks.length + 1}`, e.at));
+  return true;
+}
+
+/** Everyone holding one of the roles, as (user, role) pairs, minus the excluded person. */
+function holders(roles: readonly Role[], exceptUserId: string | null): { userId: string; role: Role }[] {
+  return users.flatMap((u) => u.id === exceptUserId ? [] : roles.filter((r) => u.roles.includes(r)).map((role) => ({ userId: u.id, role })));
 }
 
 function quietHours(rules: RuleSetting[]): QuietHours {
@@ -190,13 +209,19 @@ function systemMessages(projectId: string, events: TimelineEvent[]): ChatMessage
 
 const RECOVERY_REVIEWERS: readonly Role[] = ['admin', 'owner', 'backup_approver'];
 
-export function createDemoApi(): Api {
+export function createDemoApi(opts: { now?: () => Date } = {}): Api {
   const db = seed();
+  const now = opts.now ?? (() => new Date());
+  const emit = (e: Omit<NotificationEvent, 'at'>) => enqueue(db, { ...e, at: now().toISOString() });
   const sessions = new Map<string, string>();   // sessionId -> userId
   let sessionSeq = 0;
   function hold(user: User, role: Role) {
     holdRole(user, role);
     if (user.sessionId !== undefined && sessions.get(user.sessionId) !== user.id) throw new ApiError('SESSION_REVOKED', 'session.revoked');
+  }
+  function recoveryNotice(h: { userId: string; role: Role }, r: { id: string; userName: string | null }): Omit<NotificationEvent, 'at'> {
+    return { ...h, cls: 'approval', priority: 'normal', textKey: 'notif.recovery_started', target: h.role === 'admin' ? '/admin' : '/admin/approvals',
+             dedupeKey: `recovery:${r.id}`, vars: { name: r.userName ?? '' } };
   }
   function publicRecovery(r: (typeof db.recoveries)[number]): RecoveryRequest {
     const { userId: _u, reviewerIds: _r, ...rest } = r;
@@ -259,6 +284,9 @@ export function createDemoApi(): Api {
         id: `${a.id}-v${a.version}`, at: a.decidedAt, actorName: user.name, actorRole: role, kind: 'approval',
         textKey: `timeline.${red ? 'override' : 'approval'}_${decision}`, reason: a.reason ?? undefined, red,
       });
+      emit({ userId: a.requestedBy, role: a.requestedRole, cls: 'approval', priority: 'normal', textKey: 'notif.approval_decided',
+             target: a.requestedRole === 'customer' ? '/c/progress' : '/admin/approvals', dedupeKey: `approval:${a.id}:v${a.version}`,
+             vars: { code: a.projectCode, decision, by: user.name } });
       return { ...a };
     },
     async listThreads(user, role) {
@@ -318,6 +346,10 @@ export function createDemoApi(): Api {
       const p: RuleProposal = { id: `rp${db.proposals.length + 1}`, key, from: r.value, to: value, reason: reason.trim(),
         proposedBy: user.id, proposedByName: user.name, status: 'requested', version: 1, createdAt: new Date().toISOString() };
       db.proposals.unshift(p);
+      for (const h of holders(['owner'], user.id)) {
+        emit({ ...h, cls: 'approval', priority: 'normal', textKey: 'notif.rule_proposed', target: '/admin/rules',
+               dedupeKey: `rule:${p.id}:requested`, vars: { by: user.name } });
+      }
       return { ...p };
     },
     async decideRuleProposal(user, role, id, decision, version, reason) {
@@ -339,6 +371,8 @@ export function createDemoApi(): Api {
         r.version += 1;
         r.history.push({ version: r.version, value: p.to, at: new Date().toISOString(), byName: `${p.proposedByName} → ${user.name}`, reason: p.reason });
       }
+      emit({ userId: p.proposedBy, role: 'admin', cls: 'approval', priority: 'normal', textKey: 'notif.rule_decided', target: '/admin/rules',
+             dedupeKey: `rule:${p.id}:v${p.version}`, vars: { decision, by: user.name } });
       return { ...p };
     },
     async listFlags(user, role): Promise<FeatureFlag[]> {
@@ -353,6 +387,11 @@ export function createDemoApi(): Api {
       const h: HelpRequest = { id: `h${db.help.length + 1}`, userName: user.name, role, kind, topic,
         note: note?.trim() || null, at: new Date().toISOString(), status: 'open' };
       db.help.unshift(h);
+      // INFERENCE: §33 has no row for help requests; treated as a reminder (held during quiet hours, no time promise).
+      for (const a of holders(['admin'], user.id)) {
+        emit({ ...a, cls: 'reminder', priority: 'normal', textKey: 'notif.help_requested', target: '/admin',
+               dedupeKey: `help:${h.id}`, vars: { name: user.name } });
+      }
       return { ...h };
     },
     async startRecovery(phone, reason) {
@@ -361,11 +400,18 @@ export function createDemoApi(): Api {
       const target = users.find((u) => u.id === userId);
       // T-008: whoever holds the lost phone is signed out everywhere at once
       for (const [sid, uid] of sessions) if (uid === userId) sessions.delete(sid);
+      // a repeat request while one is waiting is the same request: same answer, nothing new queued
+      const waiting = userId ? db.recoveries.find((r) => r.userId === userId && r.status === 'waiting') : undefined;
+      if (waiting) {
+        for (const h of holders(RECOVERY_REVIEWERS, userId)) emit(recoveryNotice(h, waiting));
+        return 'received';
+      }
       db.recoveries.unshift({ id: `r${db.recoveries.length + 1}`, userId, userName: target?.name ?? null,
         phoneMasked: digits.length === 10 ? `+91 ${digits.slice(0, 2)}•• ••${digits.slice(-2)}` : '—', reason,
         at: new Date().toISOString(), status: 'waiting',
         reviewersNeeded: target?.roles.includes('admin') ? 2 : 1,   // T-259: Admin accounts need two reviewers
         reviewerNames: [], reviewerIds: [] });
+      if (userId) for (const h of holders(RECOVERY_REVIEWERS, userId)) emit(recoveryNotice(h, db.recoveries[0]));
       return 'received';
     },
     async listSupport(user, role) {
@@ -412,11 +458,11 @@ export function createDemoApi(): Api {
     },
     async listNotifications(user, role) {
       hold(user, role);
-      const now = Date.now();
+      const nowMs = now().getTime();
       const mine = db.notifications.filter((n) => n.userId === user.id && n.role === role && !n.deletedAt);
       for (const n of mine) {
         // Outbox worker stand-in: a held item goes out once quiet hours end.
-        if (!n.sent && n.heldUntil && new Date(n.heldUntil).getTime() <= now) {
+        if (!n.sent && n.heldUntil && new Date(n.heldUntil).getTime() <= nowMs) {
           const out = deliver({ cls: n.cls, priority: n.priority, channels: planDelivery(n.cls, n.priority, new Date(n.heldUntil),
             quietHours(db.rules)).channels, deferredUntil: null }, noProvider, n.heldUntil);
           n.receipts = out.receipts;
