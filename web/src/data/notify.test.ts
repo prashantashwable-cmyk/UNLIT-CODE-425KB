@@ -100,3 +100,18 @@ describe('approval delivery window (§33 "bypass during delivery window"; settin
     expect(planDelivery('sos', 'critical', night, quiet, { approvalWindow: { startHour: 8, endHour: 9 } }).deferredUntil).toBeNull();
   });
 });
+
+describe('a held approval goes out when the window opens, if that is before quiet hours end', () => {
+  it('window 05-24, approval at 03:00 IST is released at 05:00 IST, not 07:00', () => {
+    const at3 = new Date('2026-10-26T21:30:00.000Z');               // 03:00 IST on the 27th
+    const p = planDelivery('approval', 'normal', at3, quiet, { approvalWindow: { startHour: 5, endHour: 24 } });
+    expect(p.deferredUntil).toBe('2026-10-26T23:30:00.000Z');         // 05:00 IST
+  });
+
+  it('a reminder at the same time still waits for quiet hours to end', () => {
+    const at3 = new Date('2026-10-26T21:30:00.000Z');
+    expect(planDelivery('reminder', 'normal', at3, quiet, { approvalWindow: { startHour: 5, endHour: 24 } }).deferredUntil)
+      .toBe('2026-10-27T01:30:00.000Z');
+  });
+});
+

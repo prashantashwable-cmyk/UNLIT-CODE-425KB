@@ -501,15 +501,15 @@ describe('pilot time zone and approval window are owner settings (invariant 8)',
     expect(n.heldUntil).toBeNull();                                  // 18:00 UTC is outside 21-07 quiet hours
   });
 
-  it('an approval window outside the night holds approval notices until morning', async () => {
+  it('an approval outside its window is held until the window reopens', async () => {
     const a = createDemoApi({ now: () => new Date('2026-10-27T18:00:00.000Z') });   // 23:30 IST
     const rahul = await a.login('9800000002', '123456');
     const vikram = await a.login('9800000009', '123456');
     const p = await a.proposeRule(rahul, 'admin', 'approval_window_end', 22, 'No approval pings after 10 pm');
     await a.decideRuleProposal(vikram, 'owner', p.id, 'approved', p.version);
     await a.proposeRule(rahul, 'admin', 'install_target_days', 15, 'Test');
-    // first notice was sent before the window changed (bypass); the second waits for the morning
+    // first notice was sent before the window changed (bypass); the second waits until the window reopens at 00:00 IST
     const held = (await a.listNotifications(vikram, 'owner')).filter((x) => x.textKey === 'notif.rule_proposed').map((x) => x.heldUntil);
-    expect(held.sort()).toEqual(['2026-10-28T01:30:00.000Z', null].sort());
+    expect(held.sort()).toEqual(['2026-10-27T18:30:00.000Z', null].sort());
   });
 });

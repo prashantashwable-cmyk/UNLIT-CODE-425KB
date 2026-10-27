@@ -49,11 +49,14 @@ export function inQuietHours(now: Date, q: QuietHours): boolean {
   return s < e ? m >= s && m < e : m >= s || m < e;
 }
 
-function quietEnd(now: Date, q: QuietHours): string {
-  const m = localMinutes(now, q.tzOffsetMinutes);
-  let wait = q.endHour * 60 - m;
-  if (wait <= 0) wait += 1440;
-  const end = new Date(now.getTime() + wait * 60_000);
+/** Minutes from now until the local clock next reads `hour`:00 (always > 0). */
+function minutesUntil(now: Date, hour: number, tzOffsetMinutes: number): number {
+  const wait = (hour * 60 - localMinutes(now, tzOffsetMinutes)) % 1440;
+  return wait <= 0 ? wait + 1440 : wait;
+}
+
+function after(now: Date, minutes: number): string {
+  const end = new Date(now.getTime() + minutes * 60_000);
   end.setUTCSeconds(0, 0);
   return end.toISOString();
 }
@@ -64,7 +67,12 @@ export function planDelivery(cls: EventClass, priority: Priority, now: Date, q: 
   const channels = cls === 'marketing' && !opts.marketingOptIn ? [] : [...CHANNELS[cls]];
   const inApprovalWindow = cls === 'approval' && inWindow(localMinutes(now, q.tzOffsetMinutes), opts.approvalWindow ?? ALL_DAY);
   const bypass = BYPASS.includes(cls) || inApprovalWindow || (cls === 'payment' && p === 'critical');
-  return { cls, priority: p, channels, deferredUntil: !bypass && inQuietHours(now, q) ? quietEnd(now, q) : null };
+  if (bypass || !inQuietHours(now, q)) return { cls, priority: p, channels, deferredUntil: null };
+  let wait = minutesUntil(now, q.endHour, q.tzOffsetMinutes);
+  const w = opts.approvalWindow ?? ALL_DAY;
+  // an approval held outside its window goes out when the window opens, if that comes before quiet hours end
+  if (cls === 'approval' && w.startHour !== w.endHour) wait = Math.min(wait, minutesUntil(now, w.startHour, q.tzOffsetMinutes));
+  return { cls, priority: p, channels, deferredUntil: after(now, wait) };
 }
 
 /** Try channels in order until one delivers (SOS: all of them); every attempt is logged. A critical item nobody

@@ -146,3 +146,30 @@ describe('time settings display (slice 9)', () => {
     expect(utcOffset(-210)).toBe('UTC−3:30');
   });
 });
+
+describe('empty approval window warns on the settings page', () => {
+  it('shows the warning once start = end is approved', async () => {
+    const { createDemoApi } = await import('../data/demoAdapter');
+    const a = createDemoApi();
+    const rahul = await a.login('9800000002', '123456');
+    const vikram = await a.login('9800000009', '123456');
+    const p = await a.proposeRule(rahul, 'admin', 'approval_window_start', 7, 'x');
+    await a.decideRuleProposal(vikram, 'owner', p.id, 'approved', p.version);
+    const q = await a.proposeRule(rahul, 'admin', 'approval_window_end', 7, 'x');
+    await a.decideRuleProposal(vikram, 'owner', q.id, 'approved', q.version);
+    const { render, screen } = await import('@testing-library/react');
+    const { MemoryRouter } = await import('react-router-dom');
+    const { App } = await import('../App');
+    const { AppProvider } = await import('../state/app');
+    render(<AppProvider api={a}><MemoryRouter initialEntries={['/language']}><App /></MemoryRouter></AppProvider>);
+    const { fireEvent, act } = await import('@testing-library/react');
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '9800000009' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send code' }));
+    fireEvent.change(screen.getByLabelText('6-digit code'), { target: { value: '123456' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Log in' })); });
+    fireEvent.click(await screen.findByRole('link', { name: /^☺?\s*Me$/ }));
+    fireEvent.click(await screen.findByRole('link', { name: /Rules and settings/ }));
+    expect(await screen.findByText(/approval delivery window is empty/)).toBeInTheDocument();
+  });
+});

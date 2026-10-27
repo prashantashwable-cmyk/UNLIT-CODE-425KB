@@ -121,7 +121,7 @@ function seed() {
     rule('quiet_hours_start', 21, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
     rule('quiet_hours_end', 7, 'hour', 0, 23, 'Generic placeholder (§33: quiet hours, no times set)'),
     // Quiet hours and windows are local to the pilot: India Standard Time, UTC+5:30 (AIEC-DEC-014 Pune pilot).
-    rule('pilot_utc_offset_minutes', 330, 'utc_offset', -720, 840, 'AIEC-DEC-014 (Pune pilot: IST, UTC+5:30)'),
+    rule('pilot_utc_offset_minutes', 330, 'utc_offset', -720, 840, 'INFERENCE from AIEC-DEC-014 (Pune pilot, so India Standard Time UTC+5:30)'),
     // §33 "bypass during delivery window" with no window given: all day keeps approvals flowing; owner can narrow it.
     rule('approval_window_start', 0, 'hour', 0, 23, 'Generic placeholder (§33: delivery window not defined; all day)'),
     rule('approval_window_end', 24, 'hour', 1, 24, 'Generic placeholder (§33: delivery window not defined; all day)'),
@@ -235,6 +235,8 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
     if (user.sessionId !== undefined && sessions.get(user.sessionId) !== user.id) throw new ApiError('SESSION_REVOKED', 'session.revoked');
   }
   function recoveryNotice(h: { userId: string; role: Role }, r: { id: string; userName: string | null }): Omit<NotificationEvent, 'at'> {
+    // INFERENCE: recovery notices follow the approval delivery window (Owner can stop night pings, which anyone knowing
+    // a registered number could otherwise trigger without logging in); no response time is promised (DEC-011 default).
     return { ...h, cls: 'approval', priority: 'normal', textKey: 'notif.recovery_started', target: h.role === 'admin' ? '/admin' : '/admin/approvals',
              dedupeKey: `recovery:${r.id}`, vars: { name: r.userName ?? '' } };
   }

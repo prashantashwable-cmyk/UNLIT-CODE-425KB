@@ -138,6 +138,11 @@ export function RulesScreen() {
 
       <section aria-labelledby="rules-current">
         <h2 id="rules-current">{t('rules.current')}</h2>
+        {(() => {
+          const v = (k: string) => data.rules.find((r) => r.key === k)?.value;
+          return v('approval_window_start') !== undefined && v('approval_window_start') === v('approval_window_end')
+            && <Notice tone="warn">{t('rules.window_empty')}</Notice>;
+        })()}
         <div className="table-wrap">
           <table className="table-rules">
             <thead><tr><th>{t('rules.setting')}</th><th>{t('rules.value')}</th><th>{t('rules.source')}</th><th>{t('rules.version')}</th></tr></thead>
