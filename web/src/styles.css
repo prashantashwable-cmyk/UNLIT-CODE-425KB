@@ -193,3 +193,21 @@ td a { display: inline-flex; min-height: var(--control-h); align-items: center; 
   color: var(--c-text2); font-size: 0.9rem; font-style: italic; border-top: 1px dashed var(--c-border); padding-top: var(--space-1); }
 .msg-system time { font-style: normal; }
 .money { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+
+.field select { min-height: var(--control-h); padding: 0 var(--space-2); font: inherit; color: var(--c-text);
+  background: var(--c-surface); border: var(--border-width) solid var(--c-border); border-radius: var(--radius-input); }
+.proposal, .locked-row, .decision-row { padding: var(--space-2) 0; border-bottom: 1px solid var(--c-border); }
+.proposal-change { font-weight: 700; font-variant-numeric: tabular-nums; }
+.locked-row { display: flex; gap: var(--space-2); align-items: flex-start; }
+section[aria-labelledby] { margin-top: var(--space-4); }
+
+/* Phones: setting name on its own line, then value, source and version on one wrapped line. */
+@media (max-width: 599px) {
+  .table-rules thead { position: absolute; left: -9999px; }
+  .table-rules tr { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); align-items: baseline; padding: var(--space-2) 0;
+                    border-bottom: 1px solid var(--c-border); }
+  .table-rules td { border: 0; padding: 0; }
+  .table-rules td:first-child { flex-basis: 100%; font-weight: 700; }
+  .table-rules td:nth-child(3) { color: var(--c-text2); font-size: 0.9rem; }
+}
+.rule-note { font-weight: 400; font-size: 0.85rem; }

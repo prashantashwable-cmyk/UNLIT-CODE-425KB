@@ -96,6 +96,40 @@ export interface Payment {
   status: PaymentStatus;  // set only by the provider webhook processor
 }
 
+/** Adjustable rule value (RuleConfig): starts at a decision default, changes only by Admin proposal + Owner approval. */
+export interface RuleSetting {
+  key: string;
+  value: number;
+  unit: 'days' | 'percent' | 'count' | 'ratio';
+  min: number;
+  max: number;
+  version: number;
+  source: string;           // where the default came from: a decision id or a spec section
+  history: { version: number; value: number; at: string; byName: string; reason: string }[];
+}
+
+export interface RuleProposal {
+  id: string;
+  key: string;
+  from: number;
+  to: number;
+  reason: string;
+  proposedBy: string;
+  proposedByName: string;
+  status: ApprovalStatus;
+  version: number;
+  createdAt: string;
+  decidedByName?: string;
+  decisionReason?: string;
+}
+
+/** Risky feature switch (config/flags.defaults.json): off until the named decision or review exists. */
+export interface FeatureFlag {
+  key: string;
+  on: boolean;
+  until: string;
+}
+
 export interface ExceptionItem {
   id: string;
   projectId: string;
@@ -143,4 +177,10 @@ export interface Api {
   getThread(user: User, role: Role, projectId: string): Promise<{ code: string; site: string; messages: ChatMessage[] }>;
   sendMessage(user: User, role: Role, projectId: string, text: string): Promise<ChatMessage>;
   listPayments(user: User, role: Role): Promise<Payment[]>;
+  listRules(user: User, role: Role): Promise<RuleSetting[]>;
+  listRuleProposals(user: User, role: Role): Promise<RuleProposal[]>;
+  proposeRule(user: User, role: Role, key: string, value: number, reason: string): Promise<RuleProposal>;
+  decideRuleProposal(user: User, role: Role, id: string, decision: 'approved' | 'rejected', version: number,
+                     reason?: string): Promise<RuleProposal>;
+  listFlags(user: User, role: Role): Promise<FeatureFlag[]>;
 }

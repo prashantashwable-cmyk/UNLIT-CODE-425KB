@@ -1,6 +1,6 @@
 // SCR-041 Customer progress, SCR-084 Owner summary, SCR-012 Me and settings, placeholders.
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button, Card, formatTime, Notice, SideStateBadge, SpeakButton, StageStepper, StatusChip } from '../components/ui';
 import { STAGES } from '../data/stages';
@@ -101,7 +101,7 @@ export function OwnerScreen() {
 }
 
 export function MeScreen() {
-  const { t, lang, setLang, theme, setTheme, scale, setScale, user, logout } = useApp();
+  const { t, lang, setLang, theme, setTheme, scale, setScale, user, role, logout } = useApp();
   const nav = useNavigate();
   return (
     <Layout>
@@ -136,6 +136,7 @@ export function MeScreen() {
         <p className="muted">{t('me.scale_note')}</p>
       </Card>
       <div className="row-wrap">
+        {(role === 'admin' || role === 'owner') && <Link className="btn btn-secondary" to="/admin/rules">{t('me.rules')}</Link>}
         {user && user.roles.length > 1 && <Button variant="secondary" onClick={() => nav('/role')}>{t('me.switch_role')}</Button>}
         <Button variant="secondary" onClick={() => { logout(); nav('/login'); }}>{t('me.logout')}</Button>
       </div>

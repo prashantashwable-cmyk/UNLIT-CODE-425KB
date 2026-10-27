@@ -1,10 +1,11 @@
 // In-memory demo adapter (SCR-020: isolated demo data). It mirrors the database functions' rules and error codes
 // (db/migrations/0004, 0005) so the UI behaves the same once the Supabase adapter replaces it. The database remains
 // the authority: these checks are for display only.
+import flagDefaults from '../../../config/flags.defaults.json';
 import { STAGES, type Stage } from './stages';
 import {
   ApiError, type Api, type Approval, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
-  type Project, type Role, type TimelineEvent, type User,
+  type FeatureFlag, type Project, type Role, type RuleProposal, type RuleSetting, type TimelineEvent, type User,
 } from './types';
 
 const DEMO_CODE = '123456';
@@ -90,7 +91,22 @@ function seed() {
     { id: 'm2', projectId: 'p3', at: '2026-10-26T07:10:00.000Z', kind: 'message', authorName: 'Meera Patil', authorRole: 'customer',
       text: 'The bank loan is still pending. We will update you this week.' },
   ];
-  return { projects, approvals, timelines, payments, messages };
+  // Rule values start at the stated decision defaults (§40) or spec gates. min/max are PROPOSED input guards, not spec values.
+  const rule = (key: string, value: number, unit: RuleSetting['unit'], min: number, max: number, source: string): RuleSetting =>
+    ({ key, value, unit, min, max, version: 1, source,
+       history: [{ version: 1, value, at: '2026-10-27T00:00:00.000Z', byName: 'Spec default', reason: source }] });
+  const rules: RuleSetting[] = [
+    rule('price_floor_ratio', 1.2, 'ratio', 1, 3, 'AIEC-DEC-008'),
+    rule('variation_threshold_percent', 5, 'percent', 0, 100, 'AIEC-DEC-009'),
+    rule('duplicate_window_days', 60, 'days', 1, 365, 'AIEC-DEC-007'),
+    rule('duplicate_share_percent', 10, 'percent', 0, 50, 'AIEC-DEC-007'),
+    rule('install_target_days', 14, 'days', 1, 120, 'AIEC-DEC-022'),
+    rule('lead_photos_min', 3, 'count', 1, 20, '§16.2 stage 1'),
+    // §16.2 says 'per SOP' with no number: generic placeholder the owner asked for, to be set in settings.
+    rule('readiness_photos_min', 1, 'count', 1, 30, 'Generic placeholder (§16.2: per SOP)'),
+  ];
+  const proposals: RuleProposal[] = [];
+  return { projects, approvals, timelines, payments, messages, rules, proposals };
 }
 
 function canSee(user: User, role: Role, p: Project): boolean {
@@ -206,6 +222,59 @@ export function createDemoApi(): Api {
         const p = db.projects.find((x) => x.id === pm.projectId)!;
         return canSee(user, role, p);
       });
+    },
+    async listRules(user, role) {
+      hold(user, role);
+      if (role !== 'admin' && role !== 'owner') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return db.rules.map((r) => ({ ...r, history: [...r.history] }));
+    },
+    async listRuleProposals(user, role) {
+      hold(user, role);
+      if (role !== 'admin' && role !== 'owner') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return db.proposals.map((p) => ({ ...p }));
+    },
+    // Matrix "Change rules": Admin proposes, Owner approves; never the same person.
+    async proposeRule(user, role, key, value, reason) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      const r = db.rules.find((x) => x.key === key);
+      if (!r) throw new ApiError('RULE_NOT_FOUND', 'error.NOT_FOUND');
+      if (!reason.trim()) throw new ApiError('REASON_REQUIRED', 'rules.reason_needed');
+      if (!Number.isFinite(value) || value < r.min || value > r.max) throw new ApiError('VALUE_OUT_OF_RANGE', 'rules.out_of_range');
+      // One open proposal per setting, so approving an old one cannot overwrite a newer one.
+      if (db.proposals.some((x) => x.key === key && x.status === 'requested')) throw new ApiError('RULE_PENDING', 'rules.pending_exists');
+      const p: RuleProposal = { id: `rp${db.proposals.length + 1}`, key, from: r.value, to: value, reason: reason.trim(),
+        proposedBy: user.id, proposedByName: user.name, status: 'requested', version: 1, createdAt: new Date().toISOString() };
+      db.proposals.unshift(p);
+      return { ...p };
+    },
+    async decideRuleProposal(user, role, id, decision, version, reason) {
+      hold(user, role);
+      if (role !== 'owner') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      const p = db.proposals.find((x) => x.id === id);
+      if (!p) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      if (p.status !== 'requested') throw new ApiError('APPROVAL_NOT_PENDING', 'error.APPROVAL_NOT_PENDING');
+      if (p.version !== version) throw new ApiError('VERSION_CONFLICT', 'error.VERSION_CONFLICT', true);
+      if (p.proposedBy === user.id) throw new ApiError('SELF_APPROVAL', 'approval.own_request');
+      if (decision === 'rejected' && !reason?.trim()) throw new ApiError('REASON_REQUIRED', 'approval.reject_reason');
+      p.status = decision;
+      p.version += 1;
+      p.decidedByName = user.name;
+      p.decisionReason = reason?.trim() || undefined;
+      if (decision === 'approved') {
+        const r = db.rules.find((x) => x.key === p.key)!;
+        r.value = p.to;
+        r.version += 1;
+        r.history.push({ version: r.version, value: p.to, at: new Date().toISOString(), byName: `${p.proposedByName} → ${user.name}`, reason: p.reason });
+      }
+      return { ...p };
+    },
+    async listFlags(user, role): Promise<FeatureFlag[]> {
+      hold(user, role);
+      if (role !== 'admin' && role !== 'owner') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return Object.entries(flagDefaults)
+        .filter(([k]) => !k.startsWith('_'))
+        .map(([key, v]) => ({ key, on: (v as { default: boolean }).default, until: (v as { until: string }).until }));
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);

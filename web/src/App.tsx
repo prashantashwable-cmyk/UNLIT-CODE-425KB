@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { DemoScreen, LanguageScreen, LoginScreen, RoleScreen, StartScreen } from './screens/Entry';
 import { AdminScreen, ApprovalsScreen, ProjectScreen } from './screens/Work';
 import { ChatListScreen, ChatThreadScreen, MapScreen, MoneyScreen } from './screens/Talk';
+import { RulesScreen } from './screens/Rules';
 import { CustomerProgressScreen, MeScreen, OwnerScreen, SoonScreen } from './screens/Views';
 import { homeFor, useApp } from './state/app';
 
@@ -34,6 +35,7 @@ export function App() {
       <Route path="/project/:id" element={<Guard roles={['admin']}><ProjectScreen /></Guard>} />
       <Route path="/c/progress" element={<Guard roles={['customer']}><CustomerProgressScreen /></Guard>} />
       <Route path="/owner" element={<Navigate to="/analytics" replace />} />
+      <Route path="/admin/rules" element={<Guard roles={['admin', 'owner']}><RulesScreen /></Guard>} />
       <Route path="/analytics" element={<Guard roles={['owner', 'admin']}><OwnerScreen /></Guard>} />
       <Route path="/me" element={<Guard><MeScreen /></Guard>} />
       <Route path="/chat" element={<Guard><ChatListScreen /></Guard>} />

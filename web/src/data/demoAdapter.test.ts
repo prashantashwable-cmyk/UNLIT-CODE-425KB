@@ -114,3 +114,76 @@ describe('overrides are loud (T-004 / T-160)', () => {
     expect(s.overrides[0].projectCode).toBe('PUN-0006');
   });
 });
+
+describe('rules and settings: Admin proposes, Owner approves, every version kept (SCR-079, invariant 8)', () => {
+  async function setup() {
+    const a = createDemoApi();
+    return { a, admin: await a.login('9800000002', '123456'), owner: await a.login('9800000009', '123456'),
+             both: await a.login('9800000001', '123456') };
+  }
+
+  it('starts from the decision defaults and names where each came from', async () => {
+    const { a, owner } = await setup();
+    const rules = await a.listRules(owner, 'owner');
+    const floor = rules.find((r) => r.key === 'price_floor_ratio')!;
+    expect(floor.value).toBe(1.2);
+    expect(floor.source).toBe('AIEC-DEC-008');
+    expect(floor.version).toBe(1);
+    expect(rules.find((r) => r.key === 'install_target_days')!.value).toBe(14);
+  });
+
+  it('only Admin proposes; a reason and an in-range value are required', async () => {
+    const { a, admin, owner } = await setup();
+    expect(await code(a.proposeRule(owner, 'owner', 'install_target_days', 21, 'monsoon'))).toBe('ROLE_NOT_ALLOWED');
+    expect(await code(a.proposeRule(admin, 'admin', 'install_target_days', 21, ' '))).toBe('REASON_REQUIRED');
+    expect(await code(a.proposeRule(admin, 'admin', 'install_target_days', 0, 'x'))).toBe('VALUE_OUT_OF_RANGE');
+    expect(await code(a.proposeRule(admin, 'admin', 'no_such_rule', 1, 'x'))).toBe('RULE_NOT_FOUND');
+    expect(await code(a.proposeRule(admin, 'admin', 'install_target_days', 21, 'monsoon season'))).toBe('OK');
+  });
+
+  it('a proposal changes nothing until the Owner approves; then the version goes up', async () => {
+    const { a, admin, owner } = await setup();
+    const p = await a.proposeRule(admin, 'admin', 'install_target_days', 21, 'monsoon season');
+    expect((await a.listRules(owner, 'owner')).find((r) => r.key === 'install_target_days')!.value).toBe(14);
+    expect(await code(a.decideRuleProposal(admin, 'admin', p.id, 'approved', 1))).toBe('ROLE_NOT_ALLOWED');
+    await a.decideRuleProposal(owner, 'owner', p.id, 'approved', 1);
+    const r = (await a.listRules(owner, 'owner')).find((x) => x.key === 'install_target_days')!;
+    expect(r.value).toBe(21);
+    expect(r.version).toBe(2);
+    expect(r.history.map((h) => h.value)).toEqual([14, 21]);
+  });
+
+  it('only one open proposal per setting', async () => {
+    const { a, admin } = await setup();
+    await a.proposeRule(admin, 'admin', 'install_target_days', 21, 'monsoon');
+    expect(await code(a.proposeRule(admin, 'admin', 'install_target_days', 18, 'compromise'))).toBe('RULE_PENDING');
+  });
+
+  it('someone who is Admin and Owner cannot approve their own proposal', async () => {
+    const { a, both } = await setup();
+    const p = await a.proposeRule(both, 'admin', 'lead_photos_min', 4, 'blurry leads');
+    expect(await code(a.decideRuleProposal(both, 'owner', p.id, 'approved', 1))).toBe('SELF_APPROVAL');
+  });
+
+  it('a rejected proposal keeps the old value and needs a reason', async () => {
+    const { a, admin, owner } = await setup();
+    const p = await a.proposeRule(admin, 'admin', 'price_floor_ratio', 1.1, 'match competitor');
+    expect(await code(a.decideRuleProposal(owner, 'owner', p.id, 'rejected', 1))).toBe('REASON_REQUIRED');
+    await a.decideRuleProposal(owner, 'owner', p.id, 'rejected', 1, 'margin too thin');
+    expect((await a.listRules(owner, 'owner')).find((r) => r.key === 'price_floor_ratio')!.value).toBe(1.2);
+  });
+
+  it('risky features stay locked and cannot be switched on here', async () => {
+    const { a, owner } = await setup();
+    const flags = await a.listFlags(owner, 'owner');
+    expect(flags.every((f) => f.on === false)).toBe(true);
+    expect(flags.find((f) => f.key === 'remote_lift_lock')!.until).toMatch(/never/);
+    expect(flags.find((f) => f.key === 'live_payouts')).toBeDefined();
+  });
+
+  it('customers cannot see rules', async () => {
+    const a = createDemoApi();
+    const c = await a.login('9800000021', '123456');
+    expect(await code(a.listRules(c, 'customer'))).toBe('ROLE_NOT_ALLOWED');
+  });
+});

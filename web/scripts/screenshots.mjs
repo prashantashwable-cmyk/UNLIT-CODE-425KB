@@ -74,6 +74,7 @@ for (const lang of ['mr', 'hi', 'en']) {
       ['06b-money', null, nav(3)],
       ['07-me', null, nav(4)],
       ['07b-analytics', null, nav(5)],
+      ['07c-rules', null, async (p) => { await nav(4)(p); await p.locator('a[href="/admin/rules"]').click(); }],
     ]);
   }
   await session(lang, mobile, '9800000021', null, [['08-customer-progress', null, null], ['08b-customer-money', null, nav(3)],
