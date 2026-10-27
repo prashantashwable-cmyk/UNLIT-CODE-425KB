@@ -77,11 +77,10 @@ export function useApp(): AppState {
   return v;
 }
 
-/** Where a role's Work tab goes. */
+/** Where a role's Today tab goes: its single next-action queue (§10 pattern). */
 export function homeFor(role: Role | null): string {
-  if (role === 'admin') return '/admin';
-  if (role === 'backup_approver') return '/admin/approvals';
-  if (role === 'owner') return '/owner';
+  if (role === 'admin') return '/admin';                         // exceptions queue
+  if (role === 'owner' || role === 'backup_approver') return '/admin/approvals';  // decision queue
   if (role === 'customer') return '/c/progress';
-  return '/today';
+  return '/role';
 }

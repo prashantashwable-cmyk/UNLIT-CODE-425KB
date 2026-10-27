@@ -3,8 +3,8 @@
 // the authority: these checks are for display only.
 import { STAGES, type Stage } from './stages';
 import {
-  ApiError, type Api, type Approval, type ExceptionItem, type OwnerSummary, type Project, type Role,
-  type TimelineEvent, type User,
+  ApiError, type Api, type Approval, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
+  type Project, type Role, type TimelineEvent, type User,
 } from './types';
 
 const DEMO_CODE = '123456';
@@ -69,7 +69,28 @@ function seed() {
     kind: 'side_state', side: 'on_hold', reason: 'Heavy rain, shaft flooded', evidenceCount: 1 });
   timelines.p4.unshift({ id: 'p4-b', at: '2026-10-20T07:00:00.000Z', actorName: 'Rahul Deshmukh', actorRole: 'admin',
     kind: 'stage', from: 'permit_applied', to: 'qc_clearance', reason: 'Licence holder not confirmed', red: true });
-  return { projects, approvals, timelines };
+  // Demo schedule rows: sample figures, not rates (rates are configuration, invariant 8). They follow the DEC-003
+  // default (token credited to the 70%, pending the CA), so the four rows add up to the contract value.
+  const pay = (id: string, projectId: string, projectCode: string, milestone: string, amountPaise: number,
+               status: Payment['status']): Payment => ({ id, projectId, projectCode, milestone, amountPaise, status });
+  const payments: Payment[] = [
+    pay('pay1', 'p1', 'PUN-0001', 'token', 1000000, 'confirmed'),
+    pay('pay2', 'p1', 'PUN-0001', 'material', 69000000, 'confirmed'),
+    pay('pay3', 'p1', 'PUN-0001', 'cabin', 20000000, 'confirmed'),
+    pay('pay4', 'p1', 'PUN-0001', 'handover', 10000000, 'pending'),
+    pay('pay5', 'p2', 'PUN-0002', 'token', 1000000, 'pending'),
+    pay('pay6', 'p3', 'PUN-0003', 'token', 1000000, 'confirmed'),
+    pay('pay7', 'p3', 'PUN-0003', 'material', 69000000, 'pending'),
+    pay('pay8', 'p3', 'PUN-0003', 'cabin', 20000000, 'pending'),
+    pay('pay9', 'p3', 'PUN-0003', 'handover', 10000000, 'pending'),
+  ];
+  const messages: ChatMessage[] = [
+    { id: 'm1', projectId: 'p3', at: '2026-10-26T05:30:00.000Z', kind: 'message', authorName: 'Asha Kulkarni', authorRole: 'admin',
+      text: 'Please upload the readiness photos of the pit and machine room when ready.' },
+    { id: 'm2', projectId: 'p3', at: '2026-10-26T07:10:00.000Z', kind: 'message', authorName: 'Meera Patil', authorRole: 'customer',
+      text: 'The bank loan is still pending. We will update you this week.' },
+  ];
+  return { projects, approvals, timelines, payments, messages };
 }
 
 function canSee(user: User, role: Role, p: Project): boolean {
@@ -87,6 +108,14 @@ const approverRoles: Record<string, Role[]> = {
   cancellation: ['admin'],
   qc_clearance: ['qc', 'admin'],
 };
+
+function systemMessages(projectId: string, events: TimelineEvent[]): ChatMessage[] {
+  return events.map((e) => ({
+    id: `sys-${e.id}`, projectId, at: e.at, kind: 'system' as const,
+    textKey: e.kind === 'stage' && e.to ? 'chat.stage_moved' : e.kind === 'side_state' && e.side ? `project.${e.side}` : e.textKey ?? 'chat.update',
+    vars: e.kind === 'stage' && e.to ? { stage: e.to } : undefined,
+  }));
+}
 
 export function createDemoApi(): Api {
   const db = seed();
@@ -144,6 +173,39 @@ export function createDemoApi(): Api {
         textKey: `timeline.${red ? 'override' : 'approval'}_${decision}`, reason: a.reason ?? undefined, red,
       });
       return { ...a };
+    },
+    async listThreads(user, role) {
+      hold(user, role);
+      return db.projects.filter((p) => canSee(user, role, p)).map((p) => {
+        const msgs = [...systemMessages(p.id, db.timelines[p.id] ?? []), ...db.messages.filter((m) => m.projectId === p.id)]
+          .sort((a, b) => a.at.localeCompare(b.at));
+        return { projectId: p.id, code: p.code, site: p.site, last: msgs[msgs.length - 1] ?? null };
+      });
+    },
+    async getThread(user, role, projectId) {
+      hold(user, role);
+      const p = db.projects.find((x) => x.id === projectId);
+      if (!p || !canSee(user, role, p)) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      const messages = [...systemMessages(p.id, db.timelines[p.id] ?? []), ...db.messages.filter((m) => m.projectId === p.id)]
+        .sort((a, b) => a.at.localeCompare(b.at));
+      return { code: p.code, site: p.site, messages };
+    },
+    async sendMessage(user, role, projectId, text) {
+      hold(user, role);
+      const p = db.projects.find((x) => x.id === projectId);
+      if (!p || !canSee(user, role, p)) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      if (!text.trim()) throw new ApiError('MESSAGE_EMPTY', 'chat.empty');
+      const m: ChatMessage = { id: `m${db.messages.length + 1}`, projectId, at: new Date().toISOString(), kind: 'message',
+        authorName: user.name, authorRole: role, text: text.trim() };
+      db.messages.push(m);
+      return m;
+    },
+    async listPayments(user, role) {
+      hold(user, role);
+      return db.payments.filter((pm) => {
+        const p = db.projects.find((x) => x.id === pm.projectId)!;
+        return canSee(user, role, p);
+      });
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);

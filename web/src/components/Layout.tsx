@@ -18,12 +18,14 @@ function useOnline() {
 export function Layout({ children, nav = true }: { children: ReactNode; nav?: boolean }) {
   const { t, api, role, lang, setLang } = useApp();
   const online = useOnline();
+  // FIVE_TABS: the same five for every role; Admin and Owner add Analytics.
   const tabs = [
-    { to: '/today', key: 'nav.today', icon: '☀' },
-    { to: homeFor(role), key: 'nav.work', icon: '▤' },
+    { to: homeFor(role), key: 'nav.today', icon: '☀', end: true },
+    { to: '/map', key: 'nav.map', icon: '⌖' },
     { to: '/chat', key: 'nav.chat', icon: '✉' },
     { to: '/money', key: 'nav.money', icon: '₹' },
     { to: '/me', key: 'nav.me', icon: '☺' },
+    ...(role === 'admin' || role === 'owner' ? [{ to: '/analytics', key: 'nav.analytics', icon: '▥' }] : []),
   ];
   return (
     <div className="shell">
@@ -42,9 +44,9 @@ export function Layout({ children, nav = true }: { children: ReactNode; nav?: bo
       {!online && <div className="banner banner-offline" role="status"><span aria-hidden="true">⚡</span> {t('app.offline')}</div>}
       <main id="main" className="main">{children}</main>
       {nav && role && (
-        <nav className="bottomnav" aria-label="Main">
+        <nav className="bottomnav" aria-label="Main" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
           {tabs.map((tab) => (
-            <NavLink key={tab.key} to={tab.to} className={({ isActive }) => `tab${isActive ? ' tab-active' : ''}`}>
+            <NavLink key={tab.key} to={tab.to} end={'end' in tab} className={({ isActive }) => `tab${isActive ? ' tab-active' : ''}`}>
               <span className="tab-icon" aria-hidden="true">{tab.icon}</span>
               <span>{t(tab.key)}</span>
             </NavLink>

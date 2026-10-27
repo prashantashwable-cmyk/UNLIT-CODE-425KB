@@ -128,6 +128,7 @@ describe('owner', () => {
   it('summary chart has a table view', async () => {
     renderApp();
     await loginAs('9800000009');
+    fireEvent.click(await screen.findByRole('link', { name: /Analytics/ }));
     expect(await screen.findByRole('heading', { name: 'Business summary' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Show as table' }));
     expect(screen.getByRole('table')).toHaveTextContent('Installation');
@@ -139,7 +140,7 @@ describe('role guards (display only; the database decides the data)', () => {
     renderApp();
     await loginAs('9800000021');
     expect(await screen.findByRole('heading', { name: 'Your lift' })).toBeInTheDocument();
-    for (const url of ['/admin', '/project/p3', '/owner', '/admin/approvals']) {
+    for (const url of ['/admin', '/project/p3', '/owner', '/analytics', '/admin/approvals']) {
       await act(async () => { go(url); });
       expect(screen.queryByRole('heading', { name: 'Exceptions to resolve' })).toBeNull();
       expect(screen.getByRole('heading', { name: 'Your lift' })).toBeInTheDocument();
@@ -156,8 +157,6 @@ describe('role guards (display only; the database decides the data)', () => {
   it('owner gets override approvals without project links (matrix: site location = summary)', async () => {
     renderApp();
     await loginAs('9800000009');
-    fireEvent.click(await screen.findByRole('link', { name: /Today/ }));
-    fireEvent.click(await screen.findByRole('link', { name: 'Open' }));
     const card = (await screen.findByText('Override')).closest('section')!;
     expect(within(card).queryByRole('link', { name: 'PUN-0006' })).toBeNull();
     expect(screen.queryByText('QC clearance')).toBeNull();
@@ -227,6 +226,7 @@ describe('slice 2: voice, trails, loud overrides, install guide', () => {
   it("the Owner's summary lists this week's overrides with their reason (T-160)", async () => {
     renderApp();
     await loginAs('9800000009');
+    fireEvent.click(await screen.findByRole('link', { name: /Analytics/ }));
     const list = (await screen.findByRole('heading', { name: 'Overrides to review this week' })).closest('section')!;
     expect(list).toHaveTextContent('PUN-0006');
     expect(list).toHaveTextContent('Waiting for a decision');

@@ -66,6 +66,36 @@ export interface Approval {
   decisionReason?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  projectId: string;
+  at: string;
+  kind: 'message' | 'system';
+  authorName?: string;
+  authorRole?: Role;
+  text?: string;          // human message (data, not translated)
+  textKey?: string;       // system event: i18n key
+  vars?: Record<string, string>;
+}
+
+export interface ChatThread {
+  projectId: string;
+  code: string;
+  site: string;
+  last: ChatMessage | null;
+}
+
+export type PaymentStatus = 'pending' | 'confirmed' | 'failed' | 'reversed' | 'disputed';
+
+export interface Payment {
+  id: string;
+  projectId: string;
+  projectCode: string;
+  milestone: string;      // i18n key suffix: milestone.<name>
+  amountPaise: number;    // integer paise (invariant 2)
+  status: PaymentStatus;  // set only by the provider webhook processor
+}
+
 export interface ExceptionItem {
   id: string;
   projectId: string;
@@ -109,4 +139,8 @@ export interface Api {
   decideApproval(user: User, role: Role, id: string, decision: 'approved' | 'rejected', version: number,
                  reason?: string): Promise<Approval>;
   ownerSummary(user: User, role: Role): Promise<OwnerSummary>;
+  listThreads(user: User, role: Role): Promise<ChatThread[]>;
+  getThread(user: User, role: Role, projectId: string): Promise<{ code: string; site: string; messages: ChatMessage[] }>;
+  sendMessage(user: User, role: Role, projectId: string, text: string): Promise<ChatMessage>;
+  listPayments(user: User, role: Role): Promise<Payment[]>;
 }

@@ -179,3 +179,12 @@ td a { display: inline-flex; min-height: var(--control-h); align-items: center; 
 .heading-row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: start; }
 .heading-row h2 { margin-top: var(--space-1); }
 .heading-row .voice-note { grid-column: 1 / -1; }
+.thread { list-style: none; padding: 0; margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.msg { background: var(--c-surface); border: var(--border-width) solid var(--c-border); border-radius: var(--radius-card);
+  padding: var(--space-2) var(--space-3); max-width: 90%; }
+.msg-mine { align-self: flex-end; border-color: var(--c-primary); }
+.msg-meta { font-size: 0.85rem; color: var(--c-text2); margin-bottom: 2px; }
+.msg-system { display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; justify-content: center;
+  color: var(--c-text2); font-size: 0.9rem; font-style: italic; border-top: 1px dashed var(--c-border); padding-top: var(--space-1); }
+.msg-system time { font-style: normal; }
+.money { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }

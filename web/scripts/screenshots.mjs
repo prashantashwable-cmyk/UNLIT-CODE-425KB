@@ -69,13 +69,16 @@ for (const lang of ['mr', 'hi', 'en']) {
     await session(lang, vp, '9800000002', null, [
       ['03-admin-queue', null, null],
       ['04-approvals', null, async (p) => p.locator('a[href="/admin/approvals"]').first().click()],
-      ['05-project-file', null, async (p) => { await nav(1)(p); await p.locator('.list-item').first().click(); }],
-      ['06-today', null, nav(0)],
+      ['05-project-file', null, async (p) => { await nav(0)(p); await p.locator('.list-item').first().click(); }],
+      ['06-chat-thread', null, async (p) => { await nav(2)(p); await p.locator('.list-item').nth(2).click(); }],
+      ['06b-money', null, nav(3)],
       ['07-me', null, nav(4)],
+      ['07b-analytics', null, nav(5)],
     ]);
   }
-  await session(lang, mobile, '9800000021', null, [['08-customer-progress', null, null]]);
-  await session(lang, desktop, '9800000009', null, [['09-owner-summary', null, null], ['09b-owner-approvals', null, async (p) => { await nav(0)(p); await p.locator('.btn-cta').click(); }]]);
+  await session(lang, mobile, '9800000021', null, [['08-customer-progress', null, null], ['08b-customer-money', null, nav(3)],
+    ['08c-customer-chat', null, async (p) => { await nav(2)(p); await p.locator('.list-item').first().click(); }]]);
+  await session(lang, desktop, '9800000009', null, [['09-owner-decisions', null, null], ['09b-owner-summary', null, nav(5)]]);
   await session(lang, mobile, '9800000031', null, [['10-field-role-refused', null, null]]);
 }
 

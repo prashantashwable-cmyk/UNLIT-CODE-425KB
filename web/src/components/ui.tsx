@@ -106,3 +106,17 @@ export function SpeakButton({ text, lang, label }: { text: string; lang?: Lang; 
     </>
   );
 }
+
+/** Rupees from integer paise, Indian grouping, Latin digits in every language (ICU's mr-IN grouping is wrong: ₹६९०,०००). */
+export function formatMoney(paise: number, _lang: string): string {
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2,
+    minimumFractionDigits: paise % 100 === 0 ? 0 : 2 }).format(paise / 100);
+}
+
+const PAY_ICON: Record<string, string> = { confirmed: '✓', pending: '…', failed: '✕', reversed: '↺', disputed: '⚠' };
+
+export function PayChip({ status }: { status: string }) {
+  const { t } = useApp();
+  const tone = status === 'confirmed' ? 'green' : status === 'pending' ? 'amber' : 'red';
+  return <span className={`chip chip-${tone}`}><span aria-hidden="true">{PAY_ICON[status]}</span> {t(`pay.${status}`)}</span>;
+}

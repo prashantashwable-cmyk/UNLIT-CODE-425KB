@@ -1,10 +1,10 @@
-// SCR-008 Today, SCR-073 Admin exceptions, SCR-075 Project file, SCR-076 Approvals inbox.
+// SCR-073 Admin exceptions (Admin's Today), SCR-075 Project file, SCR-076 Approvals inbox.
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Button, Card, formatTime, Notice, SideStateBadge, SpeakButton, StageBar, StatusChip } from '../components/ui';
-import { ApiError, type Approval, type ExceptionItem, type Project, type TimelineEvent } from '../data/types';
-import { homeFor, useApp } from '../state/app';
+import { ApiError, type Approval, type ExceptionItem, type TimelineEvent } from '../data/types';
+import { useApp } from '../state/app';
 
 function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data: T | null; error: string | null; reload(): void } {
   const [data, setData] = useState<T | null>(null);
@@ -19,52 +19,6 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data: T | null; er
   return { data, error, reload: () => setN((x) => x + 1) };
 }
 
-export function TodayScreen() {
-  const { t, api, user, role } = useApp();
-  const { data } = useLoad(async () => {
-    if (!user || !role) return null;
-    if (role === 'admin') return { kind: 'exception' as const, x: (await api.listExceptions(user, role))[0] ?? null,
-                                   projects: await api.listProjects(user, role) };
-    if (role === 'owner') return { kind: 'approvals' as const, n: (await api.listApprovals(user, role)).filter((a) => a.status === 'requested').length };
-    return { kind: 'project' as const, p: (await api.listProjects(user, role))[0] ?? null };
-  }, [user, role]);
-  if (!data) return <Layout><p className="muted">…</p></Layout>;
-  let body;
-  if (data.kind === 'exception') {
-    const p = data.x && data.projects.find((pp: Project) => pp.id === data.x!.projectId);
-    body = data.x && p ? (
-      <Card className="next">
-        <StatusChip severity={data.x.severity} reason={t(data.x.kindKey)} />
-        <div className="heading-row"><h2>{t(data.x.kindKey)}</h2><SpeakButton text={t(data.x.kindKey)} /></div>
-        <p>{p.code} · {p.site}</p>
-        <Link className="btn btn-primary btn-cta" to={`/project/${p.id}`}>{t('today.open')}</Link>
-      </Card>
-    ) : <Notice>{t('admin.all_clear')}</Notice>;
-  } else if (data.kind === 'approvals') {
-    body = (
-      <Card className="next">
-        <h2>{t('admin.approvals_title')}: {data.n}</h2>
-        <Link className="btn btn-primary btn-cta" to="/admin/approvals">{t('today.open')}</Link>
-      </Card>
-    );
-  } else {
-    body = data.p ? (
-      <Card className="next">
-        <StatusChip severity={data.p.severity} reason={t(data.p.nextKey)} />
-        <h2>{t(data.p.nextKey)}</h2>
-        <p>{t('today.waiting_on')}: {t(`role.${data.p.waitingOn}`)}</p>
-        <Link className="btn btn-primary btn-cta" to={homeFor(role)}>{t('today.open')}</Link>
-      </Card>
-    ) : <Notice>{t('shared.nothing_now')}</Notice>;
-  }
-  return (
-    <Layout>
-      <h1>{t('today.next')}</h1>
-      {body}
-    </Layout>
-  );
-}
-
 export function AdminScreen() {
   const { t, api, user, role } = useApp();
   const { data } = useLoad(async () => user && role ? {
@@ -76,7 +30,10 @@ export function AdminScreen() {
     <Layout>
       <div className="row-between">
         <h1>{t('admin.queue_title')}</h1>
-        <Link className="btn btn-secondary" to="/admin/approvals">{t('admin.approvals_title')}</Link>
+        <div className="row-wrap">
+          {data.xs[0] && <SpeakButton text={`${t(`severity.${data.xs[0].severity}`)}. ${t(data.xs[0].kindKey)}`} />}
+          <Link className="btn btn-secondary" to="/admin/approvals">{t('admin.approvals_title')}</Link>
+        </div>
       </div>
       {data.xs.length === 0 && <Notice>{t('admin.all_clear')}</Notice>}
       <ul className="list">
