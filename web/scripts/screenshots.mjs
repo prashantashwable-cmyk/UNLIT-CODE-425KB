@@ -61,6 +61,10 @@ for (const lang of ['mr', 'hi', 'en']) {
   await page.screenshot({ path: `${OUT}${lang}-360-01-language.png`, fullPage: true });
   await page.goto(`${BASE}/login`);
   await page.screenshot({ path: `${OUT}${lang}-360-02-login.png`, fullPage: true });
+  await page.goto(`${BASE}/help`);
+  await page.screenshot({ path: `${OUT}${lang}-360-02b-help.png`, fullPage: true });
+  await page.goto(`${BASE}/recovery`);
+  await page.screenshot({ path: `${OUT}${lang}-360-02c-recovery.png`, fullPage: true });
   await page.close();
 }
 

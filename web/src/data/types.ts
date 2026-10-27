@@ -130,6 +130,36 @@ export interface FeatureFlag {
   until: string;
 }
 
+export type HelpKind = 'callback' | 'chat';
+export type HelpTopic = 'app' | 'project' | 'payment';
+
+/** A request for a person (SCR-018). No response time is promised (DEC-011 default). */
+export interface HelpRequest {
+  id: string;
+  userName: string;
+  role: Role;
+  kind: HelpKind;
+  topic: HelpTopic;
+  note: string | null;
+  at: string;
+  status: 'open' | 'contacted';
+  handledByName?: string;
+}
+
+export type RecoveryReason = 'lost_phone' | 'new_number' | 'no_code';
+
+/** Human-reviewed account recovery (SCR-019): logins stay blocked until enough different people verify. */
+export interface RecoveryRequest {
+  id: string;
+  phoneMasked: string;
+  userName: string | null;     // null when the number is not on file
+  reason: RecoveryReason;
+  at: string;
+  status: 'waiting' | 'verified';
+  reviewersNeeded: number;
+  reviewerNames: string[];
+}
+
 export interface ExceptionItem {
   id: string;
   projectId: string;
@@ -183,4 +213,10 @@ export interface Api {
   decideRuleProposal(user: User, role: Role, id: string, decision: 'approved' | 'rejected', version: number,
                      reason?: string): Promise<RuleProposal>;
   listFlags(user: User, role: Role): Promise<FeatureFlag[]>;
+  requestHelp(user: User, role: Role, kind: HelpKind, topic: HelpTopic, note?: string): Promise<HelpRequest>;
+  /** Always answers 'received', whether or not the number is on file (no account discovery). */
+  startRecovery(phone: string, reason: RecoveryReason): Promise<'received'>;
+  listSupport(user: User, role: Role): Promise<{ help: HelpRequest[]; recoveries: RecoveryRequest[] }>;
+  markHelpContacted(user: User, role: Role, id: string): Promise<void>;
+  verifyRecovery(user: User, role: Role, id: string): Promise<RecoveryRequest>;
 }

@@ -5,7 +5,8 @@ import { DemoScreen, LanguageScreen, LoginScreen, RoleScreen, StartScreen } from
 import { AdminScreen, ApprovalsScreen, ProjectScreen } from './screens/Work';
 import { ChatListScreen, ChatThreadScreen, MapScreen, MoneyScreen } from './screens/Talk';
 import { RulesScreen } from './screens/Rules';
-import { CustomerProgressScreen, MeScreen, OwnerScreen, SoonScreen } from './screens/Views';
+import { HelpScreen, RecoveryScreen } from './screens/Support';
+import { CustomerProgressScreen, MeScreen, OwnerScreen } from './screens/Views';
 import { homeFor, useApp } from './state/app';
 
 // Screen access by role (screen inventory roles column). Display only: the database decides what data comes back.
@@ -42,8 +43,8 @@ export function App() {
       <Route path="/chat/:projectId" element={<Guard><ChatThreadScreen /></Guard>} />
       <Route path="/money" element={<Guard><MoneyScreen /></Guard>} />
       <Route path="/demo" element={<DemoScreen />} />
-      <Route path="/help" element={<SoonScreen />} />
-      <Route path="/recovery" element={<SoonScreen />} />
+      <Route path="/help" element={<HelpScreen />} />
+      <Route path="/recovery" element={<RecoveryScreen />} />
       <Route path="*" element={<Navigate to={start} replace />} />
     </Routes>
   );

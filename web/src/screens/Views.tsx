@@ -143,13 +143,3 @@ export function MeScreen() {
     </Layout>
   );
 }
-
-export function SoonScreen() {
-  const { t } = useApp();
-  return (
-    <Layout>
-      <h1>{t('soon.title')}</h1>
-      <Notice>{t('soon.body')}</Notice>
-    </Layout>
-  );
-}

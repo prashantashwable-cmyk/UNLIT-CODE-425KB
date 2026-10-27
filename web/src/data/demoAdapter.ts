@@ -5,7 +5,8 @@ import flagDefaults from '../../../config/flags.defaults.json';
 import { STAGES, type Stage } from './stages';
 import {
   ApiError, type Api, type Approval, type ChatMessage, type ExceptionItem, type OwnerSummary, type Payment,
-  type FeatureFlag, type Project, type Role, type RuleProposal, type RuleSetting, type TimelineEvent, type User,
+  type FeatureFlag, type HelpRequest, type Project, type RecoveryRequest, type Role, type RuleProposal, type RuleSetting,
+  type TimelineEvent, type User,
 } from './types';
 
 const DEMO_CODE = '123456';
@@ -106,7 +107,9 @@ function seed() {
     rule('readiness_photos_min', 1, 'count', 1, 30, 'Generic placeholder (§16.2: per SOP)'),
   ];
   const proposals: RuleProposal[] = [];
-  return { projects, approvals, timelines, payments, messages, rules, proposals };
+  const help: HelpRequest[] = [];
+  const recoveries: (RecoveryRequest & { userId: string | null; reviewerIds: string[] })[] = [];
+  return { projects, approvals, timelines, payments, messages, rules, proposals, help, recoveries };
 }
 
 function canSee(user: User, role: Role, p: Project): boolean {
@@ -142,6 +145,8 @@ export function createDemoApi(): Api {
       const id = phones[phone.replace(/\D/g, '').slice(-10)];
       if (!id) throw new ApiError('NOT_INVITED', 'shared.not_invited');
       if (code !== DEMO_CODE) throw new ApiError('OTP_WRONG', 'shared.otp_wrong', true);
+      // Recovery started: old sessions are revoked and nobody logs in until a person verifies (T-008).
+      if (db.recoveries.some((r) => r.userId === id && r.status === 'waiting')) throw new ApiError('RECOVERY_PENDING', 'recovery.pending');
       return users.find((u) => u.id === id)!;
     },
     async listProjects(user, role) {
@@ -275,6 +280,53 @@ export function createDemoApi(): Api {
       return Object.entries(flagDefaults)
         .filter(([k]) => !k.startsWith('_'))
         .map(([key, v]) => ({ key, on: (v as { default: boolean }).default, until: (v as { until: string }).until }));
+    },
+    async requestHelp(user, role, kind, topic, note) {
+      hold(user, role);
+      const h: HelpRequest = { id: `h${db.help.length + 1}`, userName: user.name, role, kind, topic,
+        note: note?.trim() || null, at: new Date().toISOString(), status: 'open' };
+      db.help.unshift(h);
+      return { ...h };
+    },
+    async startRecovery(phone, reason) {
+      const digits = phone.replace(/\D/g, '').slice(-10);
+      const userId = phones[digits] ?? null;
+      const target = users.find((u) => u.id === userId);
+      db.recoveries.unshift({ id: `r${db.recoveries.length + 1}`, userId, userName: target?.name ?? null,
+        phoneMasked: digits.length === 10 ? `+91 ${digits.slice(0, 2)}•• ••${digits.slice(-2)}` : '—', reason,
+        at: new Date().toISOString(), status: 'waiting',
+        reviewersNeeded: target?.roles.includes('admin') ? 2 : 1,   // T-259: Admin accounts need two reviewers
+        reviewerNames: [], reviewerIds: [] });
+      return 'received';
+    },
+    async listSupport(user, role) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return { help: db.help.map((h) => ({ ...h })),
+               recoveries: db.recoveries.map(({ userId: _u, reviewerIds: _r, ...rest }) => ({ ...rest, reviewerNames: [...rest.reviewerNames] })) };
+    },
+    async markHelpContacted(user, role, id) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      const h = db.help.find((x) => x.id === id);
+      if (!h) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      h.status = 'contacted';
+      h.handledByName = user.name;
+    },
+    async verifyRecovery(user, role, id) {
+      hold(user, role);
+      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      const r = db.recoveries.find((x) => x.id === id);
+      if (!r) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
+      if (r.userId === user.id) throw new ApiError('SELF_APPROVAL', 'approval.own_request');
+      if (!r.userId) throw new ApiError('NOT_FOUND', 'recovery.unknown_number');
+      if (r.status !== 'waiting') throw new ApiError('APPROVAL_NOT_PENDING', 'error.APPROVAL_NOT_PENDING');
+      if (r.reviewerIds.includes(user.id)) throw new ApiError('ALREADY_REVIEWED', 'recovery.already_reviewed');
+      r.reviewerIds.push(user.id);
+      r.reviewerNames.push(user.name);
+      if (r.reviewerIds.length >= r.reviewersNeeded) r.status = 'verified';
+      const { userId: _u, reviewerIds: _r, ...rest } = r;
+      return { ...rest, reviewerNames: [...rest.reviewerNames] };
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);

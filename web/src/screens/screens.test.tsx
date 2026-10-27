@@ -147,11 +147,11 @@ describe('role guards (display only; the database decides the data)', () => {
     }
   });
 
-  it('Help is reachable from every screen and is honest that it is not built yet', async () => {
+  it('Help is reachable from every screen and leads with "call 112"', async () => {
     renderApp();
     await loginAs('9800000021');
     fireEvent.click(screen.getByRole('link', { name: /Help/ }));
-    expect(screen.getByRole('heading', { name: 'Not built yet' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'In danger, call 112' })).toBeInTheDocument();
   });
 
   it('owner gets override approvals without project links (matrix: site location = summary)', async () => {

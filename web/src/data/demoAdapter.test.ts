@@ -187,3 +187,50 @@ describe('rules and settings: Admin proposes, Owner approves, every version kept
     expect(await code(a.listRules(c, 'customer'))).toBe('ROLE_NOT_ALLOWED');
   });
 });
+
+describe('help always reaches a person (SCR-018)', () => {
+  it('a help request lands with Admin, who marks it contacted', async () => {
+    const a = createDemoApi();
+    const c = await a.login('9800000021', '123456');
+    const h = await a.requestHelp(c, 'customer', 'callback', 'payment', 'Which account do I pay into?');
+    expect(h.status).toBe('open');
+    const admin = await a.login('9800000002', '123456');
+    const s = await a.listSupport(admin, 'admin');
+    expect(s.help[0]).toMatchObject({ id: h.id, userName: 'Meera Patil', kind: 'callback', topic: 'payment' });
+    await a.markHelpContacted(admin, 'admin', h.id);
+    expect((await a.listSupport(admin, 'admin')).help[0].status).toBe('contacted');
+  });
+
+  it('only Admin sees support requests', async () => {
+    const a = createDemoApi();
+    const c = await a.login('9800000021', '123456');
+    expect(await code(a.listSupport(c, 'customer'))).toBe('ROLE_NOT_ALLOWED');
+  });
+});
+
+describe('account recovery is human-reviewed (SCR-019, T-008, T-259)', () => {
+  it('starting recovery blocks logins until a person verifies; unknown numbers get the same answer', async () => {
+    const a = createDemoApi();
+    expect(await a.startRecovery('9800000021', 'lost_phone')).toBe('received');
+    expect(await a.startRecovery('9123456789', 'lost_phone')).toBe('received');
+    expect(await code(a.login('9800000021', '123456'))).toBe('RECOVERY_PENDING');
+    const admin = await a.login('9800000002', '123456');
+    const r = (await a.listSupport(admin, 'admin')).recoveries.find((x) => x.userName === 'Meera Patil')!;
+    expect(r.reviewersNeeded).toBe(1);
+    await a.verifyRecovery(admin, 'admin', r.id);
+    expect(await code(a.login('9800000021', '123456'))).toBe('OK');
+  });
+
+  it('an Admin account needs two different reviewers, and nobody reviews their own recovery', async () => {
+    const a = createDemoApi();
+    const admin1 = await a.login('9800000001', '123456');   // Asha: admin + owner
+    const admin2 = await a.login('9800000002', '123456');
+    await a.startRecovery('9800000002', 'lost_phone');       // Rahul's account
+    const r = (await a.listSupport(admin1, 'admin')).recoveries[0];
+    expect(r.reviewersNeeded).toBe(2);
+    expect(await code(a.verifyRecovery(admin2, 'admin', r.id))).toBe('SELF_APPROVAL');
+    await a.verifyRecovery(admin1, 'admin', r.id);
+    expect(await code(a.verifyRecovery(admin1, 'admin', r.id))).toBe('ALREADY_REVIEWED');
+    expect(await code(a.login('9800000002', '123456'))).toBe('RECOVERY_PENDING');
+  });
+});

@@ -5,6 +5,7 @@ import { Layout } from '../components/Layout';
 import { Button, Card, formatTime, Notice, SideStateBadge, SpeakButton, StageBar, StatusChip } from '../components/ui';
 import { ApiError, type Approval, type ExceptionItem, type TimelineEvent } from '../data/types';
 import { useApp } from '../state/app';
+import { SupportPanel } from './Support';
 
 function useLoad<T>(fn: () => Promise<T>, deps: unknown[]): { data: T | null; error: string | null; reload(): void } {
   const [data, setData] = useState<T | null>(null);
@@ -48,6 +49,7 @@ export function AdminScreen() {
           </li>
         ))}
       </ul>
+      <SupportPanel />
       <h2>{t('admin.projects')}</h2>
       <div className="table-wrap">
         <table className="table-stack">
