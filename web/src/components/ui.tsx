@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import type { Lang } from '../i18n/i18n';
+import { speak, type SpeakResult } from '../voice/speech';
 import type { SideState, Stage } from '../data/stages';
 import { STAGES, stageNumber } from '../data/stages';
 import type { Severity } from '../data/types';
@@ -7,10 +9,12 @@ import { useApp } from '../state/app';
 /** Status is never colour alone: icon + text (spec §10.4, §12). */
 const SEVERITY_ICON: Record<Severity, string> = { red: '■', amber: '▲', green: '●' };
 
-export function StatusChip({ severity }: { severity: Severity }) {
+export function StatusChip({ severity, reason }: { severity: Severity; reason?: string }) {
   const { t } = useApp();
+  // Screen readers hear "state, reason" (§12); sighted users see the icon + state, with the reason next to it.
   return (
-    <span className={`chip chip-${severity}`}>
+    <span className={`chip chip-${severity}`} role={reason ? 'img' : undefined}
+          aria-label={reason ? `${t(`severity.${severity}`)}, ${reason}` : undefined}>
       <span aria-hidden="true">{SEVERITY_ICON[severity]}</span> {t(`severity.${severity}`)}
     </span>
   );
@@ -83,4 +87,22 @@ export function formatTime(iso: string, lang: string): string {
   const locale = lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN';
   return new Date(iso).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
     timeZone: 'Asia/Kolkata' });
+}
+
+/** Repeat-icon button that reads a line aloud in the given language (VOICE_ASSIST; device TTS stand-in). */
+export function SpeakButton({ text, lang, label }: { text: string; lang?: Lang; label?: string }) {
+  const app = useApp();
+  const l = lang ?? app.lang ?? 'mr';
+  const [result, setResult] = useState<SpeakResult | null>(null);
+  return (
+    <>
+      <button type="button" className="btn btn-secondary btn-icon" lang={l} aria-label={label ?? app.t('voice.listen')}
+              onClick={() => setResult(speak(text, l, setResult))}>
+        <span aria-hidden="true">🔊</span>
+      </button>
+      {(result === 'no_voice' || result === 'unsupported') && (
+        <span className="voice-note" role="status">{app.t(result === 'no_voice' ? 'voice.no_voice' : 'voice.unsupported')}</span>
+      )}
+    </>
+  );
 }

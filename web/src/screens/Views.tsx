@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { Button, Card, Notice, SideStateBadge, StageStepper, StatusChip } from '../components/ui';
+import { Button, Card, formatTime, Notice, SideStateBadge, SpeakButton, StageStepper, StatusChip } from '../components/ui';
 import { STAGES } from '../data/stages';
 import { ApiError, type OwnerSummary, type Project } from '../data/types';
 import { LANGS, translate } from '../i18n/i18n';
@@ -21,8 +21,8 @@ export function CustomerProgressScreen() {
     <Layout>
       <h1>{t('cust.progress_title')}</h1>
       <p className="muted">{p.code} · {p.site}</p>
-      <div className="row-wrap"><StatusChip severity={p.severity} /><SideStateBadge side={p.sideState} /></div>
-      <Card className="next"><h2>{t(p.nextKey)}</h2></Card>
+      <div className="row-wrap"><StatusChip severity={p.severity} reason={t(p.nextKey)} /><SideStateBadge side={p.sideState} /></div>
+      <Card className="next"><div className="heading-row"><h2>{t(p.nextKey)}</h2><SpeakButton text={t(p.nextKey)} /></div></Card>
       <Notice>{t('cust.no_live_tracking')}</Notice>
       <StageStepper stage={p.stage} />
     </Layout>
@@ -64,7 +64,7 @@ function ByStageChart({ byStage }: { byStage: OwnerSummary['byStage'] }) {
 }
 
 export function OwnerScreen() {
-  const { t, api, user, role } = useApp();
+  const { t, api, user, role, lang } = useApp();
   const [s, setS] = useState<OwnerSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -81,6 +81,19 @@ export function OwnerScreen() {
         <Card className="tile"><span className="tile-n">{s.overridesThisWeek}</span>{t('owner.overrides_week')}
           <span className="muted">{t('owner.overrides_note')}</span></Card>
       </div>
+      <Card className={s.overrides.length ? 'card-red' : ''}>
+        <h2>{t('owner.overrides_list')}</h2>
+        {s.overrides.length === 0 ? <Notice>{t('admin.all_clear')}</Notice> : (
+          <ul className="list">
+            {s.overrides.map((o) => (
+              <li key={o.id} className="override-row">
+                <strong><span aria-hidden="true">■ </span>{o.projectCode}</strong> · {o.reason}
+                <div className="muted">{o.requestedByName} · {formatTime(o.createdAt, lang ?? 'mr')} · {t(`status.${o.status}`)}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
       <Notice>{t('owner.money_not_connected')}</Notice>
       <ByStageChart byStage={s.byStage} />
     </Layout>

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { LANGS, translate, type Lang } from '../i18n/i18n';
 import { homeFor, useApp } from '../state/app';
 
 function useOnline() {
@@ -15,7 +16,7 @@ function useOnline() {
 }
 
 export function Layout({ children, nav = true }: { children: ReactNode; nav?: boolean }) {
-  const { t, api, role } = useApp();
+  const { t, api, role, lang, setLang } = useApp();
   const online = useOnline();
   const tabs = [
     { to: '/today', key: 'nav.today', icon: '☀' },
@@ -29,6 +30,10 @@ export function Layout({ children, nav = true }: { children: ReactNode; nav?: bo
       <a className="skip" href="#main">{t('app.skip')}</a>
       <header className="topbar">
         <span className="brand">{t('app.name')}</span>
+        <select className="lang-switch" aria-label={t('me.language')} value={lang ?? 'mr'}
+                onChange={(e) => setLang(e.target.value as Lang)}>
+          {LANGS.map((l) => <option key={l} value={l} lang={l}>{translate(`lang.${l}`, l)}</option>)}
+        </select>
         <Link className="help" to="/help" aria-label={t('shared.help')}>
           <span aria-hidden="true">?</span> {t('shared.help')}
         </Link>

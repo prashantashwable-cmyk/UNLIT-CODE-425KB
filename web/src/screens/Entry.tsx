@@ -1,11 +1,40 @@
 // SCR-002 language, SCR-003 OTP login, SCR-007 role switcher.
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Card, Notice } from '../components/ui';
+import { Button, Card, Notice, SpeakButton } from '../components/ui';
 import { Layout } from '../components/Layout';
 import { ApiError, FIELD_ROLES, WEB_ROLES, type Role } from '../data/types';
 import { LANGS, translate } from '../i18n/i18n';
 import { homeFor, useApp } from '../state/app';
+
+/** SCR-001 Start and install gate: field roles install the Android app; everyone can try the demo. */
+export function StartScreen() {
+  const { t } = useApp();
+  return (
+    <Layout nav={false}>
+      <h1>{t('start.title')}</h1>
+      <InstallGuide intro={t('start.field_workers')} />
+      <Link className="btn btn-primary btn-cta" to="/language">{t('start.continue')}</Link>
+    </Layout>
+  );
+}
+
+function InstallGuide({ intro }: { intro?: string }) {
+  const { t } = useApp();
+  return (
+    <Card>
+      <h2>{t('install.title')}</h2>
+      {intro && <p>{intro}</p>}
+      <ol className="install-steps">
+        <li>{t('install.step1')}</li>
+        <li>{t('install.step2')}</li>
+        <li>{t('install.step3')}</li>
+      </ol>
+      <Notice tone="warn">{t('install.android_only')}</Notice>
+      <Link className="btn btn-secondary" to="/demo">{t('demo.try')}</Link>
+    </Card>
+  );
+}
 
 export function LanguageScreen() {
   const { setLang, lang } = useApp();
@@ -17,10 +46,13 @@ export function LanguageScreen() {
       <p className="muted">{LANGS.filter((l) => l !== (lang ?? 'mr')).map((l) => translate('lang.title', l)).join(' · ')}</p>
       <div className="stack">
         {LANGS.map((l) => (
-          <Button key={l} variant={lang === l ? 'primary' : 'secondary'} className="btn-big" lang={l}
-                  onClick={() => { setLang(l); nav('/login'); }}>
-            {translate(`lang.${l}`, l)}
-          </Button>
+          <div key={l} className="lang-row">
+            <Button variant={lang === l ? 'primary' : 'secondary'} className="btn-big" lang={l}
+                    onClick={() => { setLang(l); nav('/login'); }}>
+              {translate(`lang.${l}`, l)}
+            </Button>
+            <SpeakButton text={translate('lang.title', l)} lang={l} label={translate('voice.listen', l)} />
+          </div>
         ))}
       </div>
     </Layout>
@@ -108,6 +140,24 @@ export function RoleScreen() {
           );
         })}
       </div>
+      {user.roles.some((r) => FIELD_ROLES.includes(r)) && <InstallGuide />}
+    </Layout>
+  );
+}
+
+/** SCR-020 Demo home: isolated sample data; always reachable. */
+export function DemoScreen() {
+  const { t, api } = useApp();
+  return (
+    <Layout nav={false}>
+      <h1>{t('demo.title')}</h1>
+      <Notice>{t('demo.body')}</Notice>
+      <ul className="demo-accounts">
+        {api.demoAccounts().filter((u) => u.roles.some((r) => WEB_ROLES.includes(r))).map((u) => (
+          <li key={u.id}>{u.name} — {u.roles.map((r) => t(`role.${r}`)).join(', ')}</li>
+        ))}
+      </ul>
+      <Link className="btn btn-primary" to="/login">{t('login.verify')}</Link>
     </Layout>
   );
 }

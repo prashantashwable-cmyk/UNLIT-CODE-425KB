@@ -134,7 +134,15 @@ export function createDemoApi(): Api {
       a.status = decision;
       a.version += 1;
       a.decidedByName = user.name;
+      a.decidedRole = role;
+      a.decidedAt = new Date().toISOString();
       a.decisionReason = reason?.trim() || undefined;
+      // Every decision is on the project timeline; an override is loud (red, with its reason).
+      const red = a.kind === 'override';
+      (db.timelines[a.projectId] ??= []).unshift({
+        id: `${a.id}-v${a.version}`, at: a.decidedAt, actorName: user.name, actorRole: role, kind: 'approval',
+        textKey: `timeline.${red ? 'override' : 'approval'}_${decision}`, reason: a.reason ?? undefined, red,
+      });
       return { ...a };
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
@@ -142,11 +150,14 @@ export function createDemoApi(): Api {
       if (role !== 'owner' && role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
       const byStage = Object.fromEntries(STAGES.map((s) => [s, 0])) as Record<Stage, number>;
       for (const p of db.projects) byStage[p.stage] += 1;
+      const weekOverrides = db.approvals.filter((a) => a.kind === 'override'
+        && Date.now() - new Date(a.createdAt).getTime() <= 7 * 24 * 3600 * 1000);
       return {
         active: db.projects.filter((p) => p.sideState !== 'cancelled' && p.sideState !== 'lost').length,
         stopped: db.projects.filter((p) => p.severity === 'red').length,
-        overridesThisWeek: db.approvals.filter((a) => a.kind === 'override'
-          && Date.now() - new Date(a.createdAt).getTime() <= 7 * 24 * 3600 * 1000).length,
+        overridesThisWeek: weekOverrides.length,
+        overrides: weekOverrides.map((a) => ({ id: a.id, projectCode: a.projectCode, reason: a.reason ?? '',
+          requestedByName: a.requestedByName, status: a.status, createdAt: a.createdAt })),
         byStage,
       };
     },

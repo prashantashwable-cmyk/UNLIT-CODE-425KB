@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { Button, Card, formatTime, Notice, SideStateBadge, StageBar, StatusChip } from '../components/ui';
+import { Button, Card, formatTime, Notice, SideStateBadge, SpeakButton, StageBar, StatusChip } from '../components/ui';
 import { ApiError, type Approval, type ExceptionItem, type Project, type TimelineEvent } from '../data/types';
 import { homeFor, useApp } from '../state/app';
 
@@ -34,8 +34,8 @@ export function TodayScreen() {
     const p = data.x && data.projects.find((pp: Project) => pp.id === data.x!.projectId);
     body = data.x && p ? (
       <Card className="next">
-        <StatusChip severity={data.x.severity} />
-        <h2>{t(data.x.kindKey)}</h2>
+        <StatusChip severity={data.x.severity} reason={t(data.x.kindKey)} />
+        <div className="heading-row"><h2>{t(data.x.kindKey)}</h2><SpeakButton text={t(data.x.kindKey)} /></div>
         <p>{p.code} · {p.site}</p>
         <Link className="btn btn-primary btn-cta" to={`/project/${p.id}`}>{t('today.open')}</Link>
       </Card>
@@ -50,7 +50,7 @@ export function TodayScreen() {
   } else {
     body = data.p ? (
       <Card className="next">
-        <StatusChip severity={data.p.severity} />
+        <StatusChip severity={data.p.severity} reason={t(data.p.nextKey)} />
         <h2>{t(data.p.nextKey)}</h2>
         <p>{t('today.waiting_on')}: {t(`role.${data.p.waitingOn}`)}</p>
         <Link className="btn btn-primary btn-cta" to={homeFor(role)}>{t('today.open')}</Link>
@@ -83,8 +83,8 @@ export function AdminScreen() {
         {data.xs.map((x: ExceptionItem) => (
           <li key={x.id}>
             <Link className="list-item" to={`/project/${x.projectId}`}>
-              <StatusChip severity={x.severity} />
-              <span className="grow"><strong>{t(x.kindKey)}</strong><br />
+              <StatusChip severity={x.severity} reason={t(x.kindKey)} />
+              <span className="grow"><strong aria-hidden="true">{t(x.kindKey)}</strong><br />
                 <span className="muted">{byId[x.projectId].code} · {byId[x.projectId].site}</span></span>
               <span aria-hidden="true">›</span>
             </Link>
@@ -186,7 +186,15 @@ function ApprovalCard({ a, onDone }: { a: Approval; onDone(): void }) {
         {a.reason && <><dt>{t('approval.reason')}</dt><dd>{a.reason}</dd></>}
       </dl>
       {a.status !== 'requested' ? (
-        <Notice>{t('approval.decided')}: {a.status === 'approved' ? t('approval.approve') : t('approval.reject')} · {a.decidedByName}</Notice>
+        <>
+          <Notice>{t('approval.decided')}: {t(`status.${a.status}`)} · {a.decidedByName}</Notice>
+          <dl className="facts" aria-label={t('approval.trail')}>
+            <dt>{t('approval.decided_by')}</dt>
+            <dd>{a.decidedByName}{a.decidedRole ? ` · ${t(`role.${a.decidedRole}`)}` : ''}{a.decidedAt ? ` · ${formatTime(a.decidedAt, lang ?? 'mr')}` : ''}</dd>
+            {a.decisionReason && <><dt>{t('approval.reason')}</dt><dd>{a.decisionReason}</dd></>}
+            <dt>{t('approval.trail')}</dt><dd>{t('approval.version', { n: a.version })}</dd>
+          </dl>
+        </>
       ) : own ? (
         <Notice tone="warn">{t('approval.own_request')}</Notice>
       ) : (

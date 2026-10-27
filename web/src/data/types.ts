@@ -61,6 +61,8 @@ export interface Approval {
   version: number;
   createdAt: string;
   decidedByName?: string;
+  decidedRole?: Role;
+  decidedAt?: string;
   decisionReason?: string;
 }
 
@@ -71,10 +73,21 @@ export interface ExceptionItem {
   kindKey: string;         // i18n key
 }
 
+export interface OverrideItem {
+  id: string;
+  projectCode: string;
+  reason: string;
+  requestedByName: string;
+  status: ApprovalStatus;
+  createdAt: string;
+}
+
 export interface OwnerSummary {
   active: number;
   stopped: number;
   overridesThisWeek: number;
+  /** T-160: every override of the last 7 days, with its reason, for the weekly review */
+  overrides: OverrideItem[];
   byStage: Record<Stage, number>;
 }
 

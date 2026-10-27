@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate, type NavigateFunction } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import { AppProvider } from '../state/app';
 
@@ -22,6 +22,7 @@ function renderApp(path = '/') {
 }
 
 async function loginAs(phone: string) {
+  fireEvent.click(screen.getByRole('link', { name: /ब्राउझरमध्ये पुढे चला|Continue in the browser/ }));
   fireEvent.click(screen.getByRole('button', { name: 'English' }));
   fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: phone } });
   fireEvent.click(screen.getByRole('button', { name: 'Send code' }));
@@ -33,8 +34,14 @@ beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
 describe('entry flow', () => {
-  it('starts with the language choice in Marathi first and sets the page language', async () => {
+  it('starts at the install gate (SCR-001) with the demo always reachable, then the language choice', async () => {
     renderApp();
+    expect(screen.getByRole('heading', { name: 'AIEC फील्ड ॲप इन्स्टॉल करा' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'डेमो वापरून पाहा' })).toBeInTheDocument();
+  });
+
+  it('language choice is Marathi first and sets the page language', async () => {
+    renderApp('/language');
     const buttons = screen.getAllByRole('button');
     expect(buttons[0]).toHaveTextContent('मराठी');
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
@@ -43,13 +50,13 @@ describe('entry flow', () => {
   });
 
   it('always shows the demo banner and a red Help', () => {
-    renderApp();
+    renderApp('/language');
     expect(screen.getByRole('note')).toHaveTextContent(/DEMO|डेमो/);
     expect(screen.getByRole('link', { name: /Help|मदत/ })).toBeInTheDocument();
   });
 
   it('wrong code shows the localised error', async () => {
-    renderApp();
+    renderApp('/language');
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
     fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: '9800000002' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send code' }));
@@ -90,7 +97,7 @@ describe('admin', () => {
     const qc = screen.getByText('QC clearance').closest('section')!;
     await act(async () => { fireEvent.click(within(qc).getByRole('button', { name: 'Approve' })); });
     const qcAfter = (await screen.findByText('QC clearance')).closest('section')!;
-    expect(qcAfter).toHaveTextContent(/Decided: Approve · Rahul Deshmukh/);
+    expect(qcAfter).toHaveTextContent(/Decided: Approved · Rahul Deshmukh/);
   });
 
   it('an override is loud, and its requester cannot decide it (part of T-004; red timeline entry not built)', async () => {
@@ -166,5 +173,81 @@ describe('settings', () => {
     const h = parseFloat(document.documentElement.style.getPropertyValue('--control-h'));
     expect(h).toBeGreaterThanOrEqual(44);
     expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe('0.2');
+  });
+});
+
+describe('slice 2: voice, trails, loud overrides, install guide', () => {
+  it('each language button has a Listen control that reads the line in that language without navigating', async () => {
+    const spoken: { lang: string }[] = [];
+    vi.stubGlobal('speechSynthesis', { getVoices: () => [{ lang: 'mr-IN' }, { lang: 'hi-IN' }, { lang: 'en-IN' }],
+      cancel: () => {}, speak: (u: { lang: string }) => spoken.push(u) });
+    vi.stubGlobal('SpeechSynthesisUtterance', class { lang = ''; voice = null; constructor(public text: string) {} });
+    renderApp('/language');
+    const listen = screen.getAllByRole('button', { name: /ऐका|सुनें|Listen/ });
+    expect(listen).toHaveLength(3);
+    fireEvent.click(listen[1]);
+    expect(spoken[0].lang).toBe('hi-IN');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('तुमची भाषा निवडा');
+    vi.unstubAllGlobals();
+  });
+
+  it('says so when the phone has no voice for the language', async () => {
+    vi.stubGlobal('speechSynthesis', { getVoices: () => [{ lang: 'en-US' }], cancel: () => {}, speak: () => {} });
+    vi.stubGlobal('SpeechSynthesisUtterance', class { lang = ''; voice = null; constructor(public text: string) {} });
+    renderApp('/language');
+    fireEvent.click(screen.getAllByRole('button', { name: /ऐका/ })[0]);
+    expect(screen.getByRole('status')).toHaveTextContent('या फोनमध्ये या भाषेचा आवाज अजून नाही');
+    vi.unstubAllGlobals();
+  });
+
+  it('status chips are announced as "state, reason"', async () => {
+    renderApp();
+    await loginAs('9800000002');
+    await screen.findByRole('heading', { name: 'Exceptions to resolve' });
+    expect(screen.getAllByLabelText('Stopped, Payment not confirmed. Container will not open').length).toBeGreaterThan(0);
+  });
+
+  it('a decided approval shows its trail; an override decision is a red timeline entry with its reason', async () => {
+    renderApp();
+    await loginAs('9800000002');
+    fireEvent.click(await screen.findByRole('link', { name: 'Approvals inbox' }));
+    const card = (await screen.findByText('Override')).closest('section')!;
+    await act(async () => { fireEvent.click(within(card).getByRole('button', { name: 'Approve' })); });
+    const after = (await screen.findByText('Override')).closest('section')!;
+    expect(after).toHaveTextContent('Decided by');
+    expect(after).toHaveTextContent('Rahul Deshmukh · Admin');
+    expect(after).toHaveTextContent('Version 2');
+    fireEvent.click(within(after).getByRole('link', { name: 'PUN-0006' }));
+    const first = (await screen.findAllByRole('listitem')).find((li) => li.classList.contains('tl'))!;
+    expect(first).toHaveClass('tl-red');
+    expect(first).toHaveTextContent('Override approved');
+    expect(first).toHaveTextContent('Permit office closed; proceed on scanned receipt');
+  });
+
+  it("the Owner's summary lists this week's overrides with their reason (T-160)", async () => {
+    renderApp();
+    await loginAs('9800000009');
+    const list = (await screen.findByRole('heading', { name: 'Overrides to review this week' })).closest('section')!;
+    expect(list).toHaveTextContent('PUN-0006');
+    expect(list).toHaveTextContent('Waiting for a decision');
+    expect(list).toHaveTextContent('Permit office closed; proceed on scanned receipt');
+  });
+
+  it('a field role sees the install guide and can still open the demo (T-006)', async () => {
+    renderApp();
+    await loginAs('9800000031');
+    expect(screen.getByRole('heading', { name: 'Install the AIEC field app' })).toBeInTheDocument();
+    expect(screen.getByText(/Android-only at launch/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Try the demo' }));
+    expect(screen.getByRole('heading', { name: 'Demo' })).toBeInTheDocument();
+  });
+
+  it('the top bar has a language switch on every screen (LANG3)', async () => {
+    renderApp();
+    await loginAs('9800000002');
+    await screen.findByRole('heading', { name: 'Exceptions to resolve' });
+    fireEvent.change(screen.getByRole('combobox', { name: /Language|भाषा/ }), { target: { value: 'hi' } });
+    expect(await screen.findByRole('heading', { name: 'हल करने वाले अपवाद' })).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe('hi');
   });
 });

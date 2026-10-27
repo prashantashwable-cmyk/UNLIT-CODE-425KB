@@ -78,3 +78,39 @@ describe('owner visibility', () => {
     expect((await a.ownerSummary(o, 'owner')).active).toBeGreaterThan(0);
   });
 });
+
+describe('overrides are loud (T-004 / T-160)', () => {
+  it('deciding an override records who decided, when, and adds a red timeline entry with the reason', async () => {
+    const a = createDemoApi();
+    const admin2 = await a.login('9800000002', '123456');
+    const decided = await a.decideApproval(admin2, 'admin', 'a2', 'approved', 1);
+    expect(decided.decidedByName).toBe('Rahul Deshmukh');
+    expect(decided.decidedRole).toBe('admin');
+    expect(decided.decidedAt).toBeTruthy();
+    expect(decided.version).toBe(2);
+    const { timeline } = await a.getProject(admin2, 'admin', 'p6');
+    const red = timeline.find((e) => e.kind === 'approval' && e.red);
+    expect(red?.reason).toBe('Permit office closed; proceed on scanned receipt');
+    expect(red?.textKey).toBe('timeline.override_approved');
+    expect(timeline[0]).toBe(red);   // newest first
+  });
+
+  it('a normal approval decision is not red', async () => {
+    const a = createDemoApi();
+    const admin2 = await a.login('9800000002', '123456');
+    await a.decideApproval(admin2, 'admin', 'a1', 'approved', 1);
+    const { timeline } = await a.getProject(admin2, 'admin', 'p4');
+    const e = timeline.find((x) => x.kind === 'approval');
+    expect(e).toBeDefined();
+    expect(e?.red).toBeFalsy();
+    expect(e?.textKey).toBe('timeline.approval_approved');
+  });
+
+  it("the Owner's weekly summary lists overrides with their reason", async () => {
+    const a = createDemoApi();
+    const o = await a.login('9800000009', '123456');
+    const s = await a.ownerSummary(o, 'owner');
+    expect(s.overrides.map((x) => x.reason)).toContain('Permit office closed; proceed on scanned receipt');
+    expect(s.overrides[0].projectCode).toBe('PUN-0006');
+  });
+});

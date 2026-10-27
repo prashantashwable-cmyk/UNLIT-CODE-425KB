@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Role } from './data/types';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { LanguageScreen, LoginScreen, RoleScreen } from './screens/Entry';
+import { DemoScreen, LanguageScreen, LoginScreen, RoleScreen, StartScreen } from './screens/Entry';
 import { AdminScreen, ApprovalsScreen, ProjectScreen, TodayScreen } from './screens/Work';
 import { CustomerProgressScreen, MeScreen, OwnerScreen, SoonScreen } from './screens/Views';
 import { homeFor, useApp } from './state/app';
@@ -18,10 +18,11 @@ function Guard({ children, roles }: { children: ReactNode; roles?: Role[] }) {
 
 export function App() {
   const { lang, user, role } = useApp();
-  const start = !lang ? '/language' : !user ? '/login' : !role ? '/role' : homeFor(role);
+  const start = !lang ? '/start' : !user ? '/login' : !role ? '/role' : homeFor(role);
   return (
     <Routes>
       <Route path="/" element={<Navigate to={start} replace />} />
+      <Route path="/start" element={<StartScreen />} />
       <Route path="/language" element={<LanguageScreen />} />
       <Route path="/login" element={<LoginScreen />} />
       <Route path="/role" element={user ? <RoleScreen /> : <Navigate to="/login" replace />} />
@@ -34,6 +35,7 @@ export function App() {
       <Route path="/me" element={<Guard><MeScreen /></Guard>} />
       <Route path="/chat" element={<Guard><SoonScreen /></Guard>} />
       <Route path="/money" element={<Guard><SoonScreen /></Guard>} />
+      <Route path="/demo" element={<DemoScreen />} />
       <Route path="/help" element={<SoonScreen />} />
       <Route path="/recovery" element={<SoonScreen />} />
       <Route path="*" element={<Navigate to={start} replace />} />

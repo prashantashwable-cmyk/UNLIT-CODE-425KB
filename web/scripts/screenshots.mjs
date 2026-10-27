@@ -55,6 +55,8 @@ for (const lang of ['mr', 'hi', 'en']) {
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`${lang} ${m.text()}`); });
   await page.goto(BASE);
   if (lang !== 'mr') await page.evaluate((l) => localStorage.setItem('aiec.lang', JSON.stringify(l)), lang);
+  await page.goto(`${BASE}/start`);
+  await page.screenshot({ path: `${OUT}${lang}-360-00-start.png`, fullPage: true });
   await page.goto(`${BASE}/language`);
   await page.screenshot({ path: `${OUT}${lang}-360-01-language.png`, fullPage: true });
   await page.goto(`${BASE}/login`);
