@@ -340,8 +340,8 @@ describe('call tasks for undelivered critical notifications (§33 "critical item
     expect(tasks.map((x) => x.recipientName).sort()).toEqual(['Rahul Deshmukh', 'Vikram Joshi']);
     expect(tasks.every((x) => x.status === 'open' && x.textKey === 'notif.override_needed')).toBe(true);
     expect(tasks[0].phoneMasked).toMatch(/••/);                       // masked, never the full number
-    const vikram = await a.login('9800000009', '123456');
-    expect(await code(a.listCallTasks(vikram, 'owner'))).toBe('ROLE_NOT_ALLOWED');
+    expect(tasks.find((x) => x.recipientName === 'Rahul Deshmukh')!.isMine).toBe(true);
+    expect(tasks.find((x) => x.recipientName === 'Vikram Joshi')!.isMine).toBe(false);
     const meera = await a.login('9800000021', '123456');
     expect(await code(a.listCallTasks(meera, 'customer'))).toBe('ROLE_NOT_ALLOWED');
   });
@@ -365,3 +365,19 @@ describe('call tasks for undelivered critical notifications (§33 "critical item
     expect((await a.listCallTasks(asha, 'admin')).every((x) => x.status === 'done')).toBe(true);
   });
 });
+
+describe('call tasks never deadlock (same reviewer set as recovery: Admin, Owner, backup approver)', () => {
+  it("the Owner can see and close the Admin's own call task, and every attempt records who and in which role", async () => {
+    const a = createDemoApi();
+    const vikram = await a.login('9800000009', '123456');            // Owner only
+    const tasks = await a.listCallTasks(vikram, 'owner');
+    const rahulsTask = tasks.find((x) => x.recipientName === 'Rahul Deshmukh')!;
+    const own = tasks.find((x) => x.recipientName === 'Vikram Joshi')!;
+    expect(own.isMine).toBe(true);
+    expect(await code(a.logCallAttempt(vikram, 'owner', own.id, 'reached', ''))).toBe('OWN_TASK');
+    const done = await a.logCallAttempt(vikram, 'owner', rahulsTask.id, 'reached', '');
+    expect(done.status).toBe('done');
+    expect(done.attempts[0]).toMatchObject({ byName: 'Vikram Joshi', byRole: 'owner' });
+  });
+});
+

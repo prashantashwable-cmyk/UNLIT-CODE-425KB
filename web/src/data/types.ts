@@ -195,7 +195,9 @@ export interface CallTask {
   vars?: Record<string, string | number>;
   at: string;
   status: 'open' | 'done';
-  attempts: { at: string; byName: string; outcome: 'reached' | 'no_answer'; note: string | null }[];
+  /** addressed to the viewer: someone else must make this call */
+  isMine: boolean;
+  attempts: { at: string; byName: string; byRole: Role; outcome: 'reached' | 'no_answer'; note: string | null }[];
 }
 
 export interface NotificationAuditRow {

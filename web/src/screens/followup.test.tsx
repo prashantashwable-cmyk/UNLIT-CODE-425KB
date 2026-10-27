@@ -39,11 +39,11 @@ describe('Notification follow-up for Admin (call tasks + notification record)', 
     expect(within(own).queryByRole('button')).toBeNull();
 
     await act(async () => { fireEvent.click(within(vik).getByRole('button', { name: 'No answer' })); });
-    expect(vik).toHaveTextContent('No answer · Rahul Deshmukh');
+    expect(vik).toHaveTextContent('No answer · Rahul Deshmukh (Admin)');
     fireEvent.change(within(vik).getByLabelText('Note (optional)'), { target: { value: 'Will decide today' } });
     await act(async () => { fireEvent.click(within(vik).getByRole('button', { name: 'Reached' })); });
     expect(vik).toHaveTextContent('Done');
-    expect(vik).toHaveTextContent('Reached · Rahul Deshmukh');
+    expect(vik).toHaveTextContent('Reached · Rahul Deshmukh (Admin)');
     expect(vik).toHaveTextContent('Will decide today');
     expect(within(vik).queryByRole('button', { name: 'Reached' })).toBeNull();
   });
@@ -69,5 +69,14 @@ describe('Notification follow-up for Admin (call tasks + notification record)', 
     fireEvent.click(await screen.findByRole('link', { name: /^Notifications/ }));
     const crit = (await screen.findByText(/Override needs your decision/)).closest('li')!;
     expect(crit).toHaveTextContent('Not delivered outside the app: a call task was created for the Admin team');
+  });
+
+  it('the Owner reaches follow-up from the approvals inbox and sees call tasks but not the record', async () => {
+    renderApp();
+    await login('9800000009');
+    fireEvent.click(await screen.findByRole('link', { name: 'Notification follow-up' }));
+    const calls = await screen.findByRole('region', { name: 'Call tasks' });
+    expect(within(calls).getByText('Rahul Deshmukh').closest('li')!).toHaveTextContent('Reached');
+    expect(screen.queryByRole('region', { name: 'Notification record' })).toBeNull();
   });
 });

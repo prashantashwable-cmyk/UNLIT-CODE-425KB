@@ -401,6 +401,7 @@ export const webStrings: Record<string, Entry> = {
   'calls.tasks': { en: 'Call tasks', mr: 'फोन करण्याची कामे', hi: 'फ़ोन करने के कार्य' },
   'calls.why': { en: 'A critical notification reached nobody outside the app. Phone the person and log what happened.', mr: 'तातडीची सूचना ॲपबाहेर कोणालाही पोहोचली नाही. त्या व्यक्तीला फोन करा आणि काय झाले ते नोंदवा.', hi: 'ज़रूरी सूचना ऐप के बाहर किसी तक नहीं पहुँची. उस व्यक्ति को फ़ोन करें और जो हुआ वह दर्ज करें.' },
   'calls.note': { en: 'Note (optional)', mr: 'टीप (ऐच्छिक)', hi: 'टिप्पणी (वैकल्पिक)' },
+  'calls.note_hint': { en: 'No phone numbers or personal details', mr: 'फोन नंबर किंवा वैयक्तिक माहिती लिहू नका', hi: 'फ़ोन नंबर या निजी जानकारी न लिखें' },
   'calls.outcome_reached': { en: 'Reached', mr: 'बोलणे झाले', hi: 'बात हो गई' },
   'calls.outcome_no_answer': { en: 'No answer', mr: 'उत्तर नाही', hi: 'जवाब नहीं' },
   'calls.done': { en: 'Done', mr: 'पूर्ण', hi: 'पूरा' },

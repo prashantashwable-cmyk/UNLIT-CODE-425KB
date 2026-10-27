@@ -190,6 +190,7 @@ export function ApprovalsScreen() {
       {data.length === 0 && <Notice>{t('approval.none')}</Notice>}
       <div className="stack">{data.map((a) => <ApprovalCard key={`${a.id}-${a.version}`} a={a} onDone={reload} />)}</div>
       {role !== 'admin' && <SupportPanel />}
+      {role !== 'admin' && <p><Link className="btn btn-secondary" to="/admin/follow-up">{t('calls.title')}</Link></p>}
     </Layout>
   );
 }

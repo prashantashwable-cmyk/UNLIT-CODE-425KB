@@ -45,7 +45,7 @@ export function App() {
       <Route path="/chat/:projectId" element={<Guard><ChatThreadScreen /></Guard>} />
       <Route path="/money" element={<Guard><MoneyScreen /></Guard>} />
       <Route path="/notifications" element={<Guard><NotificationsScreen /></Guard>} />
-      <Route path="/admin/follow-up" element={<Guard roles={['admin']}><FollowUpScreen /></Guard>} />
+      <Route path="/admin/follow-up" element={<Guard roles={['admin', 'owner', 'backup_approver']}><FollowUpScreen /></Guard>} />
       <Route path="/demo" element={<DemoScreen />} />
       <Route path="/help" element={<HelpScreen />} />
       <Route path="/recovery" element={<RecoveryScreen />} />

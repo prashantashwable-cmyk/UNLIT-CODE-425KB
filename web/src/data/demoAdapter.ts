@@ -17,7 +17,7 @@ const PILOT_TZ_OFFSET_MIN = 330;
 const noProvider: Attempt = () => 'not_connected';
 
 type StoredNotification = AppNotification & { userId: string; role: Role; deletedAt: string | null; sent: boolean };
-type StoredCallTask = CallTask & { userId: string };
+type StoredCallTask = Omit<CallTask, 'isMine' | 'attempts'> & { userId: string; attempts: (CallTask['attempts'][number] & { byUserId: string })[] };
 
 function callTaskFor(n: StoredNotification, id: string, at: string): StoredCallTask {
   const u = users.find((x) => x.id === n.userId)!;
@@ -158,8 +158,8 @@ function quietHours(rules: RuleSetting[]): QuietHours {
   return { startHour: v('quiet_hours_start'), endHour: v('quiet_hours_end'), tzOffsetMinutes: PILOT_TZ_OFFSET_MIN };
 }
 
-function publicCallTask({ userId: _u, ...rest }: StoredCallTask): CallTask {
-  return { ...rest, attempts: rest.attempts.map((x) => ({ ...x })) };
+function publicCallTask({ userId, ...rest }: StoredCallTask, viewer: User): CallTask {
+  return { ...rest, isMine: userId === viewer.id, attempts: rest.attempts.map(({ byUserId: _b, ...x }) => ({ ...x })) };
 }
 
 const WHOLE_UNITS: readonly RuleSetting['unit'][] = ['days', 'count', 'hour'];
@@ -450,20 +450,22 @@ export function createDemoApi(): Api {
     },
     async listCallTasks(user, role) {
       hold(user, role);
-      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
-      return db.callTasks.map(publicCallTask).sort((x, y) => (x.status === y.status ? y.at.localeCompare(x.at) : x.status === 'open' ? -1 : 1));
+      if (!RECOVERY_REVIEWERS.includes(role)) throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      return db.callTasks.map((c) => publicCallTask(c, user)).sort((x, y) => (x.status === y.status ? y.at.localeCompare(x.at) : x.status === 'open' ? -1 : 1));
     },
     async logCallAttempt(user, role, id, outcome, note) {
       hold(user, role);
-      if (role !== 'admin') throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
+      // same people as recovery reviewers, so a call to the only Admin can still be made by the Owner or backup
+      if (!RECOVERY_REVIEWERS.includes(role)) throw new ApiError('ROLE_NOT_ALLOWED', 'error.ROLE_NOT_ALLOWED');
       const c = db.callTasks.find((x) => x.id === id);
       if (!c) throw new ApiError('NOT_FOUND', 'error.NOT_FOUND');
       // someone else must reach you: closing the call to yourself would hide that nobody reached you
       if (c.userId === user.id) throw new ApiError('OWN_TASK', 'calls.own_task');
       if (c.status === 'done') throw new ApiError('TASK_DONE', 'calls.already_done');
-      c.attempts.push({ at: new Date().toISOString(), byName: user.name, outcome, note: note.trim() || null });
+      // append-only attempt log with who (id + role) and when
+      c.attempts.push({ at: new Date().toISOString(), byUserId: user.id, byName: user.name, byRole: role, outcome, note: note.trim() || null });
       if (outcome === 'reached') c.status = 'done';
-      return publicCallTask(c);
+      return publicCallTask(c, user);
     },
     async ownerSummary(user, role): Promise<OwnerSummary> {
       hold(user, role);

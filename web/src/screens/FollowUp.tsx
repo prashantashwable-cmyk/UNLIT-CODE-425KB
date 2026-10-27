@@ -7,12 +7,13 @@ import { useApp } from '../state/app';
 // Admin follow-up: call tasks for critical items nobody received (§33) and the kept notification record (T-256).
 export function FollowUpScreen() {
   const { t, api, user, role, lang } = useApp();
-  const [data, setData] = useState<{ calls: CallTask[]; record: NotificationAuditRow[] } | null>(null);
+  const [data, setData] = useState<{ calls: CallTask[]; record: NotificationAuditRow[] | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const reload = useCallback(() => {
     if (!user || !role) return;
-    Promise.all([api.listCallTasks(user, role), api.notificationAudit(user, role)])
+    // the notification record is Admin-only; Owner and backup approver see call tasks only
+    Promise.all([api.listCallTasks(user, role), role === 'admin' ? api.notificationAudit(user, role) : Promise.resolve(null)])
       .then(([calls, record]) => setData({ calls, record }))
       .catch((e) => setError((e as { messageKey?: string }).messageKey ?? 'error.NOT_FOUND'));
   }, [api, user, role]);
@@ -40,7 +41,7 @@ export function FollowUpScreen() {
             {data.calls.length === 0 ? <p className="muted">{t('support.none')}</p> : (
               <ul className="list notif-list">
                 {data.calls.map((c) => {
-                  const own = c.recipientName === user!.name && c.status === 'open';
+                  const own = c.isMine && c.status === 'open';
                   return (
                     <li key={c.id} className={`notif${c.status === 'open' ? ' notif-critical' : ''}`}>
                       <div className="notif-head">
@@ -51,7 +52,7 @@ export function FollowUpScreen() {
                       <div className="muted">{formatTime(c.at, l)}</div>
                       {c.attempts.map((a, i) => (
                         <div key={i} className="muted">
-                          {t(`calls.outcome_${a.outcome}`)} · {a.byName} · {formatTime(a.at, l)}{a.note ? ` · ${a.note}` : ''}
+                          {t(`calls.outcome_${a.outcome}`)} · {a.byName} ({t(`role.${a.byRole}`)}) · {formatTime(a.at, l)}{a.note ? ` · ${a.note}` : ''}
                         </div>
                       ))}
                       {c.status === 'done' && <div className="ok-text"><span aria-hidden="true">✓ </span>{t('calls.done')}</div>}
@@ -60,6 +61,7 @@ export function FollowUpScreen() {
                         <>
                           <div className="field">
                             <label htmlFor={`note-${c.id}`}>{t('calls.note')}</label>
+                            <span className="muted">{t('calls.note_hint')}</span>
                             <input id={`note-${c.id}`} value={notes[c.id] ?? ''}
                                    onChange={(e) => setNotes((n) => ({ ...n, [c.id]: e.target.value }))} />
                           </div>
@@ -76,7 +78,7 @@ export function FollowUpScreen() {
             )}
             <p className="muted">{t('calls.demo_note')}</p>
           </section>
-          <section aria-labelledby="record-h">
+          {data.record && <section aria-labelledby="record-h">
             <h2 id="record-h">{t('calls.record')}</h2>
             <p className="muted">{t('calls.record_why')}</p>
             <div className="table-wrap">
@@ -102,7 +104,7 @@ export function FollowUpScreen() {
                 </tbody>
               </table>
             </div>
-          </section>
+          </section>}
         </>
       )}
     </Layout>
