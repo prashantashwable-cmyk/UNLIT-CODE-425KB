@@ -23,7 +23,7 @@ describe('quiet hours (NOTIFY_OUTBOX): times come from settings, local to the pi
 });
 
 describe('delivery plan per event class (§33, AUT-031)', () => {
-  it('T-087: an SOS during quiet hours goes out at once on push, SMS and the call route', () => {
+  it('T-087: an SOS during quiet hours is planned at once for push, SMS and the call route', () => {
     const p = planDelivery('sos', 'normal', night, quiet);
     expect(p).toMatchObject({ priority: 'critical', deferredUntil: null, channels: ['push', 'sms', 'call'] });
   });
@@ -60,7 +60,13 @@ describe('T-086: push fails, critical falls back, every attempt leaves a receipt
     expect(out.humanTask).toBe(false);
   });
 
-  it('when nothing reaches a critical item, a person is given the task', () => {
+  it('T-087/§33: an SOS goes out on every channel even when the first one works (push, SMS and the call route)', () => {
+    const out = deliver(planDelivery('sos', 'critical', night, quiet), () => 'delivered', at);
+    expect(out.receipts.map((r) => r.channel)).toEqual(['push', 'sms', 'call']);
+    expect(out.humanTask).toBe(false);
+  });
+
+  it('when nothing reaches a critical item, it is flagged for a person to phone', () => {
     const out = deliver(planDelivery('sos', 'critical', noon, quiet), () => 'not_connected', at);
     expect(out.receipts.map((r) => r.state)).toEqual(['not_connected', 'not_connected', 'not_connected']);
     expect(out.humanTask).toBe(true);

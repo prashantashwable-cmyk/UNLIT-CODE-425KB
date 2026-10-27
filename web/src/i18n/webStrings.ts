@@ -377,7 +377,7 @@ export const webStrings: Record<string, Entry> = {
   'notif.ack_first': { en: 'Acknowledge this critical item before deleting it', mr: 'ही तातडीची सूचना काढण्यापूर्वी मान्य करा', hi: 'इस ज़रूरी सूचना को हटाने से पहले स्वीकार करें' },
   'notif.stays': { en: 'Stays here until you acknowledge it', mr: 'तुम्ही मान्य करेपर्यंत ही इथेच राहील', hi: 'आपके स्वीकार करने तक यह यहीं रहेगी' },
   'notif.held': { en: 'Held for quiet hours until {time}', mr: 'शांत वेळेमुळे {time} पर्यंत थांबवली', hi: 'शांत समय के कारण {time} तक रोकी गई' },
-  'notif.human_task': { en: 'Not delivered outside the app: a person has been asked to phone', mr: 'ॲपबाहेर पोहोचली नाही: एका व्यक्तीला फोन करायला सांगितले आहे', hi: 'ऐप के बाहर नहीं पहुँची: एक व्यक्ति को फ़ोन करने को कहा गया है' },
+  'notif.human_task': { en: 'Not delivered outside the app: needs a phone call by a person (call task not built yet)', mr: 'ॲपबाहेर पोहोचली नाही: एका व्यक्तीने फोन करणे आवश्यक (कॉल काम अजून तयार नाही)', hi: 'ऐप के बाहर नहीं पहुँची: किसी व्यक्ति को फ़ोन करना ज़रूरी (कॉल कार्य अभी नहीं बना)' },
   'notif.in_app': { en: 'In app: shown', mr: 'ॲपमध्ये: दाखवली', hi: 'ऐप में: दिखाई गई' },
   'notif.channel_push': { en: 'Push', mr: 'पुश', hi: 'पुश' },
   'notif.channel_sms': { en: 'SMS', mr: 'SMS', hi: 'SMS' },

@@ -21,6 +21,9 @@ const CHANNELS: Record<EventClass, Channel[]> = {
   summary: ['whatsapp', 'email'],
 };
 
+/** §33 "Native push + SMS + call route": every channel at once, never stopping at the first that works. */
+const ALL_CHANNELS: readonly EventClass[] = ['sos'];
+
 /** §33 "Bypass" classes. Approvals: "bypass during delivery window" (INFERENCE: treated as bypass until the window is set). */
 const BYPASS: readonly EventClass[] = ['sos', 'approval'];
 
@@ -53,14 +56,16 @@ export function planDelivery(cls: EventClass, priority: Priority, now: Date, q: 
   return { cls, priority: p, channels, deferredUntil: !bypass && inQuietHours(now, q) ? quietEnd(now, q) : null };
 }
 
-/** Try channels in order until one delivers; every attempt is logged. A critical item nobody received becomes a human task. */
+/** Try channels in order until one delivers (SOS: all of them); every attempt is logged. A critical item nobody
+ *  received needs a person to phone. 'delivered' from a provider means accepted, not proof the person read it. */
 export function deliver(plan: DeliveryPlan, attempt: Attempt, at: string): { receipts: Receipt[]; humanTask: boolean } {
   if (plan.deferredUntil) return { receipts: [], humanTask: false };
   const receipts: Receipt[] = [];
   for (const channel of plan.channels) {
     const state = attempt(channel);
     receipts.push({ channel, state, at });
-    if (state === 'delivered') return { receipts, humanTask: false };
+    if (state === 'delivered' && !ALL_CHANNELS.includes(plan.cls)) return { receipts, humanTask: false };
   }
-  return { receipts, humanTask: plan.priority === 'critical' && plan.channels.length > 0 };
+  const reached = receipts.some((r) => r.state === 'delivered');
+  return { receipts, humanTask: !reached && plan.priority === 'critical' && plan.channels.length > 0 };
 }

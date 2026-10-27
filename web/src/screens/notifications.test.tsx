@@ -38,7 +38,7 @@ describe('Notification centre (SCR-013; T-256 UI part)', () => {
     expect(crit).toHaveTextContent('Critical');
     expect(crit).toHaveTextContent('Stays here until you acknowledge it');
     expect(crit).toHaveTextContent('Push: not connected');
-    expect(crit).toHaveTextContent('a person has been asked to phone');
+    expect(crit).toHaveTextContent('needs a phone call by a person (call task not built yet)');
     expect(within(crit).queryByRole('button', { name: 'Delete' })).toBeNull();
 
     await act(async () => { fireEvent.click(within(crit).getByRole('button', { name: 'Acknowledge' })); });
