@@ -68,7 +68,7 @@ describe('Help (SCR-018): danger first, always reaches a person, no time promise
   });
 });
 
-describe('Account recovery (SCR-019, T-008, T-259)', () => {
+describe('Account recovery (SCR-019; part of T-008 and T-259)', () => {
   it('blocks logins until a person verifies, then works again', async () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'English' }));

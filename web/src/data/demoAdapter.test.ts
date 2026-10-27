@@ -208,11 +208,13 @@ describe('help always reaches a person (SCR-018)', () => {
   });
 });
 
-describe('account recovery is human-reviewed (SCR-019, T-008, T-259)', () => {
-  it('starting recovery blocks logins until a person verifies; unknown numbers get the same answer', async () => {
+describe('account recovery is human-reviewed (SCR-019; part of T-008 and T-259: device binding needs the backend)', () => {
+  it('starting recovery signs out open sessions and blocks logins until a person verifies; unknown numbers get the same answer', async () => {
     const a = createDemoApi();
+    const thief = await a.login('9800000021', '123456');          // whoever holds the lost phone
     expect(await a.startRecovery('9800000021', 'lost_phone')).toBe('received');
     expect(await a.startRecovery('9123456789', 'lost_phone')).toBe('received');
+    expect(await code(a.listProjects(thief, 'customer'))).toBe('SESSION_REVOKED');
     expect(await code(a.login('9800000021', '123456'))).toBe('RECOVERY_PENDING');
     const admin = await a.login('9800000002', '123456');
     const r = (await a.listSupport(admin, 'admin')).recoveries.find((x) => x.userName === 'Meera Patil')!;
@@ -221,16 +223,41 @@ describe('account recovery is human-reviewed (SCR-019, T-008, T-259)', () => {
     expect(await code(a.login('9800000021', '123456'))).toBe('OK');
   });
 
-  it('an Admin account needs two different reviewers, and nobody reviews their own recovery', async () => {
+  it('an Admin account needs two different reviewers (Admin, Owner or backup), never the person themselves', async () => {
     const a = createDemoApi();
-    const admin1 = await a.login('9800000001', '123456');   // Asha: admin + owner
-    const admin2 = await a.login('9800000002', '123456');
-    await a.startRecovery('9800000002', 'lost_phone');       // Rahul's account
-    const r = (await a.listSupport(admin1, 'admin')).recoveries[0];
+    const asha = await a.login('9800000001', '123456');            // admin + owner
+    const vikram = await a.login('9800000009', '123456');          // owner
+    const rahul = await a.login('9800000002', '123456');
+    await a.startRecovery('9800000002', 'lost_phone');             // Rahul's account
+    const r = (await a.listSupport(asha, 'admin')).recoveries[0];
     expect(r.reviewersNeeded).toBe(2);
-    expect(await code(a.verifyRecovery(admin2, 'admin', r.id))).toBe('SELF_APPROVAL');
-    await a.verifyRecovery(admin1, 'admin', r.id);
-    expect(await code(a.verifyRecovery(admin1, 'admin', r.id))).toBe('ALREADY_REVIEWED');
+    expect(await code(a.verifyRecovery(rahul, 'admin', r.id))).toBe('SESSION_REVOKED');
+    await a.verifyRecovery(asha, 'admin', r.id);
+    expect(await code(a.verifyRecovery(asha, 'owner', r.id))).toBe('ALREADY_REVIEWED');
     expect(await code(a.login('9800000002', '123456'))).toBe('RECOVERY_PENDING');
+    await a.verifyRecovery(vikram, 'owner', r.id);
+    expect(await code(a.login('9800000002', '123456'))).toBe('OK');
+  });
+
+  it('a request that is not genuine can be closed with a reason, which lifts the block at once', async () => {
+    const a = createDemoApi();
+    await a.startRecovery('9800000021', 'no_code');                // e.g. a stranger typed her number
+    const admin = await a.login('9800000002', '123456');
+    const r = (await a.listSupport(admin, 'admin')).recoveries[0];
+    expect(await code(a.closeRecovery(admin, 'admin', r.id, ' '))).toBe('REASON_REQUIRED');
+    await a.closeRecovery(admin, 'admin', r.id, 'Customer called from her own phone; she did not ask for this');
+    const closed = (await a.listSupport(admin, 'admin')).recoveries[0];
+    expect(closed).toMatchObject({ status: 'closed', closedByName: 'Rahul Deshmukh' });
+    expect(await code(a.login('9800000021', '123456'))).toBe('OK');
+  });
+
+  it('nobody can close their own recovery', async () => {
+    const a = createDemoApi();
+    const asha = await a.login('9800000001', '123456');
+    await a.startRecovery('9800000001', 'lost_phone');
+    const rahul = await a.login('9800000002', '123456');
+    const r = (await a.listSupport(rahul, 'admin')).recoveries[0];
+    const asha2 = { ...asha, sessionId: undefined };              // even with a fresh server session
+    expect(await code(a.closeRecovery(asha2, 'admin', r.id, 'mine'))).toBe('SELF_APPROVAL');
   });
 });
