@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { setDisplayOffset } from '../components/ui';
 import { createDemoApi } from '../data/demoAdapter';
 import { WEB_ROLES, type Api, type Role, type User } from '../data/types';
 import { translate, type Lang } from '../i18n/i18n';
@@ -57,6 +58,12 @@ export function AppProvider({ children, api }: { children: ReactNode; api?: Api 
   const [user, setUser] = useState<User | null>(null);
   const [role, setRoleState] = useState<Role | null>(null);
   const [notifTick, setNotifTick] = useState(0);
+  const [tzTick, setTzTick] = useState(0);
+  useEffect(() => {
+    let live = true;
+    theApi.displaySettings().then((d) => { if (live) { setDisplayOffset(d.utcOffsetMinutes); setTzTick((n) => n + 1); } }).catch(() => {});
+    return () => { live = false; };
+  }, [theApi, user, role, notifTick]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -80,7 +87,7 @@ export function AppProvider({ children, api }: { children: ReactNode; api?: Api 
     setRole: (r) => { if (WEB_ROLES.includes(r)) setRoleState(r); },
     logout: () => { setUser(null); setRoleState(null); },
     t: (key, vars) => translate(key, lang ?? 'mr', vars),
-  }), [theApi, lang, theme, scale, user, role, notifTick]);
+  }), [theApi, lang, theme, scale, user, role, notifTick, tzTick]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

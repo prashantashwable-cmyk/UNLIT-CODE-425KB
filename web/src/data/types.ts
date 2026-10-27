@@ -271,6 +271,8 @@ export interface Api {
   markHelpContacted(user: User, role: Role, id: string): Promise<void>;
   verifyRecovery(user: User, role: Role, id: string): Promise<RecoveryRequest>;
   closeRecovery(user: User, role: Role, id: string, reason: string): Promise<RecoveryRequest>;
+  /** Public display settings (no login needed; nothing secret). */
+  displaySettings(): Promise<{ utcOffsetMinutes: number }>;
   listNotifications(user: User, role: Role): Promise<AppNotification[]>;
   acknowledgeNotification(user: User, role: Role, id: string): Promise<void>;
   /** hides it from the list; the audit keeps it. Critical items must be acknowledged first. */

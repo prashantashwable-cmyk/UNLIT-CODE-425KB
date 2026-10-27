@@ -83,10 +83,15 @@ export function Notice({ children, tone = 'info' }: { children: ReactNode; tone?
   );
 }
 
+// Display offset from the pilot time-zone setting (minutes east of UTC); the app sets it from the server on load.
+let displayOffsetMin = 330;
+export function setDisplayOffset(minutes: number): void { displayOffsetMin = minutes; }
+
 export function formatTime(iso: string, lang: string): string {
   const locale = lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN';
-  return new Date(iso).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-    timeZone: 'Asia/Kolkata' });
+  // shift by the setting, then format as UTC, so any whole-minute offset works without a named zone
+  return new Date(Date.parse(iso) + displayOffsetMin * 60_000).toLocaleString(locale,
+    { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
 }
 
 /** Repeat-icon button that reads a line aloud in the given language (VOICE_ASSIST; device TTS stand-in). */

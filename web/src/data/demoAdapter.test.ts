@@ -513,3 +513,15 @@ describe('pilot time zone and approval window are owner settings (invariant 8)',
     expect(held.sort()).toEqual(['2026-10-27T18:30:00.000Z', null].sort());
   });
 });
+
+describe('display settings are readable by everyone (not secret)', () => {
+  it('returns the current pilot UTC offset and follows an approved change', async () => {
+    const a = createDemoApi();
+    expect(await a.displaySettings()).toEqual({ utcOffsetMinutes: 330 });
+    const rahul = await a.login('9800000002', '123456');
+    const vikram = await a.login('9800000009', '123456');
+    const p = await a.proposeRule(rahul, 'admin', 'pilot_utc_offset_minutes', 0, 'UTC test');
+    await a.decideRuleProposal(vikram, 'owner', p.id, 'approved', p.version);
+    expect(await a.displaySettings()).toEqual({ utcOffsetMinutes: 0 });
+  });
+});

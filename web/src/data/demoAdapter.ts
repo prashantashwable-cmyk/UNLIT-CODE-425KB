@@ -473,6 +473,9 @@ export function createDemoApi(opts: { now?: () => Date } = {}): Api {
       r.closeReason = reason.trim();
       return publicRecovery(r);
     },
+    async displaySettings() {
+      return { utcOffsetMinutes: db.rules.find((r) => r.key === 'pilot_utc_offset_minutes')!.value };
+    },
     async listNotifications(user, role) {
       hold(user, role);
       const nowMs = now().getTime();
