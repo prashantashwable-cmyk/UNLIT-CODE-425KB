@@ -10,3 +10,6 @@ build/
 .claude/.autopilot-count
 .claude/autopilot
 .claude/auto-resume.log
+web/dist/
+web/screenshots/
+web/test-results/

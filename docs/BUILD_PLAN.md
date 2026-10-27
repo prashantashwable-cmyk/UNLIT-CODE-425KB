@@ -15,7 +15,7 @@ Test IDs refer to `docs/data/tests.jsonl` (grep `T-0xx`).
 - [x] ☁ RLS on every table + `apply_stage_transition` (idempotent, no self-approval, proofs + approver roles checked) + RLS tests (T-098 covered; T-001 not covered, T-002 partial: see STATE.md) — 2026-10-27
 - [ ] ☁ Auth/OTP, role assignment, delegate/backup approver, audit log (append-only), outbox
 - [ ] ☁ Evidence asset model + checks + sync protocol (`captured→queued→uploading→server_received→checked→accepted/rejected`) (T-062–T-069)
-- [ ] ☁ Design tokens → theme, i18n loader from messages.draft.json (mr/hi/en), scale slider with clamped critical controls (DEC-024)
+- [x] ☁ Design tokens → theme, i18n loader from messages.draft.json (mr/hi/en), scale slider with clamped critical controls (DEC-024) — web app 2026-10-27 (`web/`); Android theme still to do
 - [ ] 📱 Evidence camera, offline queue on device, SOS button
 - Exit: each role sees only its allowed data. Tests: T-001–T-008, T-062–T-069, T-098
 

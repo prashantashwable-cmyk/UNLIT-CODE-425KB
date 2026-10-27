@@ -1,0 +1,176 @@
+// Web UI strings. DRAFT machine translations (same status as docs/appendix/messages.draft.json): native-speaker review
+// required before release; nothing here is safety wording.
+export type Entry = { en: string; mr: string; hi: string };
+
+export const webStrings: Record<string, Entry> = {
+  'app.name': { en: 'AIEC Elevator OS', mr: 'AIEC एलिव्हेटर OS', hi: 'AIEC एलिवेटर OS' },
+  'app.demo_banner': {
+    en: 'DEMO — sample data, nothing here is real',
+    mr: 'डेमो — नमुना माहिती, यातील काहीही खरे नाही',
+    hi: 'डेमो — नमूना डेटा, इसमें कुछ भी असली नहीं है',
+  },
+  'app.offline': {
+    en: 'You are offline. Nothing is sent until you reconnect',
+    mr: 'तुम्ही ऑफलाइन आहात. इंटरनेट जोडेपर्यंत काहीही पाठवले जाणार नाही',
+    hi: 'आप ऑफ़लाइन हैं. इंटरनेट जुड़ने तक कुछ भी नहीं भेजा जाएगा',
+  },
+  'app.skip': { en: 'Skip to content', mr: 'मुख्य मजकुराकडे जा', hi: 'मुख्य सामग्री पर जाएँ' },
+
+  'lang.title': { en: 'Choose your language', mr: 'तुमची भाषा निवडा', hi: 'अपनी भाषा चुनें' },
+  'lang.mr': { en: 'मराठी', mr: 'मराठी', hi: 'मराठी' },
+  'lang.hi': { en: 'हिंदी', mr: 'हिंदी', hi: 'हिंदी' },
+  'lang.en': { en: 'English', mr: 'English', hi: 'English' },
+
+  'login.title': { en: 'Log in with your mobile number', mr: 'मोबाईल नंबरने लॉग इन करा', hi: 'मोबाइल नंबर से लॉग इन करें' },
+  'login.phone': { en: 'Mobile number', mr: 'मोबाईल नंबर', hi: 'मोबाइल नंबर' },
+  'login.send': { en: 'Send code', mr: 'कोड पाठवा', hi: 'कोड भेजें' },
+  'login.code': { en: '6-digit code', mr: '६ अंकी कोड', hi: '6 अंकों का कोड' },
+  'login.verify': { en: 'Log in', mr: 'लॉग इन करा', hi: 'लॉग इन करें' },
+  'login.demo_hint': {
+    en: 'Demo: any listed number, code 123456. Real SMS is not connected yet.',
+    mr: 'डेमो: यादीतील कोणताही नंबर, कोड 123456. खरा SMS अजून जोडलेला नाही.',
+    hi: 'डेमो: सूची का कोई भी नंबर, कोड 123456. असली SMS अभी जुड़ा नहीं है.',
+  },
+  'login.cant': { en: "Can't log in?", mr: 'लॉग इन होत नाही?', hi: 'लॉग इन नहीं हो रहा?' },
+
+  'role.title': { en: 'Choose what you are working as', mr: 'तुम्ही कोणत्या भूमिकेत काम करत आहात ते निवडा', hi: 'आप किस भूमिका में काम कर रहे हैं, चुनें' },
+  'role.admin': { en: 'Admin', mr: 'ॲडमिन', hi: 'एडमिन' },
+  'role.owner': { en: 'Owner', mr: 'मालक', hi: 'मालिक' },
+  'role.customer': { en: 'Customer', mr: 'ग्राहक', hi: 'ग्राहक' },
+  'role.technician': { en: 'Technician', mr: 'तंत्रज्ञ', hi: 'तकनीशियन' },
+  'role.qc': { en: 'QC Inspector', mr: 'QC निरीक्षक', hi: 'QC निरीक्षक' },
+  'role.rider': { en: 'Rider', mr: 'रायडर', hi: 'राइडर' },
+  'role.sales': { en: 'Sales', mr: 'विक्री', hi: 'बिक्री' },
+  'role.backup_approver': { en: 'Backup approver', mr: 'पर्यायी मंजूरकर्ता', hi: 'बैकअप अनुमोदक' },
+  'role.field_app_only': {
+    en: 'Field work uses the Android app. This browser shows a demo only.',
+    mr: 'फील्डचे काम Android ॲपवर होते. हा ब्राउझर फक्त डेमो दाखवतो.',
+    hi: 'फ़ील्ड का काम Android ऐप पर होता है. यह ब्राउज़र केवल डेमो दिखाता है.',
+  },
+
+  'nav.today': { en: 'Today', mr: 'आज', hi: 'आज' },
+  'nav.work': { en: 'Work', mr: 'काम', hi: 'काम' },
+  'nav.chat': { en: 'Chat', mr: 'चॅट', hi: 'चैट' },
+  'nav.money': { en: 'Money', mr: 'पैसे', hi: 'पैसे' },
+  'nav.me': { en: 'Me', mr: 'मी', hi: 'मैं' },
+
+  'today.next': { en: 'Your next step', mr: 'तुमची पुढची पायरी', hi: 'आपका अगला कदम' },
+  'today.waiting_on': { en: 'Waiting on', mr: 'कोणाची वाट', hi: 'किसका इंतज़ार' },
+  'today.open': { en: 'Open', mr: 'उघडा', hi: 'खोलें' },
+
+  'admin.queue_title': { en: 'Exceptions to resolve', mr: 'सोडवायचे अपवाद', hi: 'हल करने वाले अपवाद' },
+  'admin.approvals_title': { en: 'Approvals inbox', mr: 'मंजुरी इनबॉक्स', hi: 'अनुमोदन इनबॉक्स' },
+  'admin.projects': { en: 'Projects', mr: 'प्रकल्प', hi: 'प्रोजेक्ट' },
+
+  'severity.red': { en: 'Stopped', mr: 'थांबले', hi: 'रुका हुआ' },
+  'severity.amber': { en: 'Waiting', mr: 'प्रतीक्षा', hi: 'प्रतीक्षा' },
+  'severity.green': { en: 'On track', mr: 'व्यवस्थित', hi: 'ठीक चल रहा' },
+
+  'approval.kind': { en: 'Approval', mr: 'मंजुरी', hi: 'अनुमोदन' },
+  'approval.requested_by': { en: 'Requested by', mr: 'विनंती करणारे', hi: 'अनुरोधकर्ता' },
+  'approval.reason': { en: 'Reason', mr: 'कारण', hi: 'कारण' },
+  'approval.approve': { en: 'Approve', mr: 'मंजूर करा', hi: 'मंज़ूर करें' },
+  'approval.reject': { en: 'Reject', mr: 'नाकारा', hi: 'अस्वीकार करें' },
+  'approval.reject_reason': { en: 'Why are you rejecting?', mr: 'का नाकारत आहात?', hi: 'क्यों अस्वीकार कर रहे हैं?' },
+  'approval.own_request': {
+    en: 'You asked for this. Someone else must decide.',
+    mr: 'ही विनंती तुमची आहे. दुसऱ्या व्यक्तीने निर्णय घ्यायला हवा.',
+    hi: 'यह अनुरोध आपका है. किसी और को निर्णय लेना होगा.',
+  },
+  'approval.override': { en: 'Override — reviewed by the Owner weekly', mr: 'ओव्हरराइड — मालक दर आठवड्याला तपासतात', hi: 'ओवरराइड — मालिक हर हफ़्ते जाँचते हैं' },
+  'approval.decided': { en: 'Decided', mr: 'निर्णय झाला', hi: 'निर्णय हो गया' },
+  'approval.none': { en: 'No approvals waiting', mr: 'कोणतीही मंजुरी प्रलंबित नाही', hi: 'कोई अनुमोदन लंबित नहीं' },
+
+  'project.timeline': { en: 'Timeline', mr: 'घटनाक्रम', hi: 'घटनाक्रम' },
+  'project.stage': { en: 'Stage', mr: 'टप्पा', hi: 'चरण' },
+  'project.stage_of': { en: 'Stage {n} of 16', mr: '१६ पैकी टप्पा {n}', hi: '16 में से चरण {n}' },
+  'project.on_hold': { en: 'On hold', mr: 'थांबवलेले', hi: 'रोका गया' },
+  'project.disputed': { en: 'Disputed', mr: 'वादग्रस्त', hi: 'विवादित' },
+  'project.cancelled': { en: 'Cancelled', mr: 'रद्द', hi: 'रद्द' },
+  'project.lost': { en: 'Lost', mr: 'गमावले', hi: 'खोया' },
+  'project.evidence': { en: '{n} photos', mr: '{n} फोटो', hi: '{n} फ़ोटो' },
+  'project.licence_holder': { en: 'Licence holder', mr: 'परवानाधारक', hi: 'लाइसेंस धारक' },
+  'project.not_named': { en: 'Not named yet', mr: 'अजून नाव दिलेले नाही', hi: 'अभी नाम नहीं दिया' },
+
+  'cust.progress_title': { en: 'Your lift', mr: 'तुमची लिफ्ट', hi: 'आपकी लिफ़्ट' },
+  'cust.done': { en: 'Done', mr: 'पूर्ण', hi: 'पूरा' },
+  'cust.now': { en: 'Now', mr: 'आत्ता', hi: 'अभी' },
+  'cust.later': { en: 'Later', mr: 'नंतर', hi: 'बाद में' },
+  'cust.no_live_tracking': {
+    en: 'Live tracking is not connected. You see stage-approved photos only.',
+    mr: 'थेट ट्रॅकिंग जोडलेले नाही. फक्त मंजूर टप्प्यांचे फोटो दिसतात.',
+    hi: 'लाइव ट्रैकिंग जुड़ी नहीं है. केवल स्वीकृत चरणों की फ़ोटो दिखती हैं.',
+  },
+
+  'owner.title': { en: 'Business summary', mr: 'व्यवसाय सारांश', hi: 'व्यवसाय सारांश' },
+  'owner.active': { en: 'Active projects', mr: 'चालू प्रकल्प', hi: 'चालू प्रोजेक्ट' },
+  'owner.stopped': { en: 'Stopped', mr: 'थांबलेले', hi: 'रुके हुए' },
+  'owner.overrides_week': { en: 'Overrides this week', mr: 'या आठवड्यातील ओव्हरराइड', hi: 'इस हफ़्ते के ओवरराइड' },
+  'owner.money_not_connected': {
+    en: 'Money figures appear once the payment provider is connected.',
+    mr: 'पेमेंट प्रदाता जोडल्यावर पैशांचे आकडे दिसतील.',
+    hi: 'पेमेंट प्रदाता जुड़ने के बाद पैसों के आँकड़े दिखेंगे.',
+  },
+  'owner.by_stage': { en: 'Projects by stage', mr: 'टप्प्यानुसार प्रकल्प', hi: 'चरण के अनुसार प्रोजेक्ट' },
+
+  'me.title': { en: 'Me and settings', mr: 'मी आणि सेटिंग्ज', hi: 'मैं और सेटिंग्स' },
+  'me.language': { en: 'Language', mr: 'भाषा', hi: 'भाषा' },
+  'me.theme': { en: 'Look', mr: 'दिसणे', hi: 'दिखावट' },
+  'me.theme_light': { en: 'Light', mr: 'फिकट', hi: 'हल्का' },
+  'me.theme_dark': { en: 'Dark', mr: 'गडद', hi: 'गहरा' },
+  'me.theme_outdoor': { en: 'Outdoor (high contrast)', mr: 'बाहेरील (जास्त कॉन्ट्रास्ट)', hi: 'बाहरी (अधिक कंट्रास्ट)' },
+  'me.scale': { en: 'Text size', mr: 'अक्षरांचा आकार', hi: 'अक्षरों का आकार' },
+  'me.scale_note': {
+    en: 'Buttons and links never get smaller than a safe touch size.',
+    mr: 'बटणे आणि लिंक सुरक्षित स्पर्श आकारापेक्षा कधीही लहान होत नाहीत.',
+    hi: 'बटन और लिंक कभी सुरक्षित टच आकार से छोटे नहीं होते.',
+  },
+  'me.switch_role': { en: 'Switch role', mr: 'भूमिका बदला', hi: 'भूमिका बदलें' },
+  'me.logout': { en: 'Log out', mr: 'लॉग आउट', hi: 'लॉग आउट' },
+
+  'soon.title': { en: 'Not built yet', mr: 'अजून तयार नाही', hi: 'अभी बना नहीं' },
+  'soon.body': {
+    en: 'This screen comes in a later build step.',
+    mr: 'ही स्क्रीन पुढच्या टप्प्यात येईल.',
+    hi: 'यह स्क्रीन अगले चरण में आएगी.',
+  },
+
+  'exc.licence_holder_missing': { en: 'Licence holder not named: permit stage blocked', mr: 'परवानाधारकाचे नाव नाही: परवानगी टप्पा थांबला', hi: 'लाइसेंस धारक का नाम नहीं: अनुमति चरण रुका' },
+  'exc.on_hold': { en: 'Project on hold', mr: 'प्रकल्प थांबवलेला', hi: 'प्रोजेक्ट रोका गया' },
+
+  'approvalkind.qc_clearance': { en: 'QC clearance', mr: 'QC मंजुरी', hi: 'QC मंज़ूरी' },
+  'approvalkind.override': { en: 'Override', mr: 'ओव्हरराइड', hi: 'ओवरराइड' },
+  'approvalkind.cancellation': { en: 'Cancellation request', mr: 'रद्द करण्याची विनंती', hi: 'रद्द करने का अनुरोध' },
+
+  'error.ROLE_NOT_HELD': { en: 'You do not have this role', mr: 'तुमच्याकडे ही भूमिका नाही', hi: 'आपके पास यह भूमिका नहीं है' },
+  'error.NOT_FOUND': { en: 'Not found or not yours to see', mr: 'सापडले नाही किंवा तुम्हाला दिसण्याची परवानगी नाही', hi: 'नहीं मिला या देखने की अनुमति नहीं' },
+  'error.APPROVAL_NOT_PENDING': { en: 'Someone already decided this', mr: 'यावर आधीच निर्णय झाला आहे', hi: 'इस पर पहले ही निर्णय हो चुका है' },
+  'error.VERSION_CONFLICT': { en: 'This changed meanwhile. Refresh and look again', mr: 'दरम्यान हे बदलले. रिफ्रेश करून पुन्हा पाहा', hi: 'इस बीच यह बदल गया. रिफ़्रेश करके फिर देखें' },
+  'error.ROLE_NOT_ALLOWED': { en: 'Your role cannot do this', mr: 'तुमची भूमिका हे करू शकत नाही', hi: 'आपकी भूमिका यह नहीं कर सकती' },
+
+  'chart.table': { en: 'Show as table', mr: 'तक्ता म्हणून दाखवा', hi: 'तालिका के रूप में दिखाएँ' },
+  'chart.summary': {
+    en: '{total} projects across 16 stages; the most are at {stage} ({n})',
+    mr: '१६ टप्प्यांमध्ये {total} प्रकल्प; सर्वाधिक {stage} येथे ({n})',
+    hi: '16 चरणों में {total} प्रोजेक्ट; सबसे अधिक {stage} पर ({n})',
+  },
+  'owner.overrides_note': { en: 'Override requests in the last 7 days', mr: 'मागील ७ दिवसांतील ओव्हरराइड विनंत्या', hi: 'पिछले 7 दिनों के ओवरराइड अनुरोध' },
+  'chart.count': { en: 'Projects', mr: 'प्रकल्प', hi: 'प्रोजेक्ट' },
+
+  'stage.lead_captured': { en: 'Lead captured', mr: 'लीड नोंदवली', hi: 'लीड दर्ज' },
+  'stage.lead_verified': { en: 'Lead verified', mr: 'लीड तपासली', hi: 'लीड सत्यापित' },
+  'stage.contacted': { en: 'Contacted', mr: 'संपर्क झाला', hi: 'संपर्क हुआ' },
+  'stage.quoted': { en: 'Quoted', mr: 'किंमत दिली', hi: 'कोटेशन दिया' },
+  'stage.agreement_token': { en: 'Agreement and token', mr: 'करार आणि टोकन', hi: 'अनुबंध और टोकन' },
+  'stage.site_readiness': { en: 'Site readiness', mr: 'साइट तयारी', hi: 'साइट तैयारी' },
+  'stage.qc_clearance': { en: 'QC clearance', mr: 'QC मंजुरी', hi: 'QC मंज़ूरी' },
+  'stage.permit_applied': { en: 'Permit applied', mr: 'परवानगी अर्ज', hi: 'अनुमति आवेदन' },
+  'stage.production_order': { en: 'Production order', mr: 'उत्पादन ऑर्डर', hi: 'उत्पादन ऑर्डर' },
+  'stage.dispatch': { en: 'Dispatch', mr: 'रवानगी', hi: 'रवानगी' },
+  'stage.container_delivery': { en: 'Container delivery', mr: 'कंटेनर पोहोच', hi: 'कंटेनर डिलीवरी' },
+  'stage.cabin_delivery': { en: 'Cabin delivery', mr: 'केबिन पोहोच', hi: 'केबिन डिलीवरी' },
+  'stage.installation': { en: 'Installation', mr: 'बसवणी', hi: 'इंस्टॉलेशन' },
+  'stage.qc_inspector': { en: 'QC and Inspector', mr: 'QC आणि निरीक्षक', hi: 'QC और निरीक्षक' },
+  'stage.licence': { en: 'Licence', mr: 'परवाना', hi: 'लाइसेंस' },
+  'stage.handover': { en: 'Handover', mr: 'हस्तांतरण', hi: 'हस्तांतरण' },
+};

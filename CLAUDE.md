@@ -44,6 +44,7 @@ Sessions can end at any time (usage limit, timeout). Keep exactly one line `NEXT
 
 ## Cloud-session limits (Claude Code on the web)
 No Android device/emulator, no camera, no GPS, no real payment/WhatsApp/eSign providers. So in cloud: build and test backend (schema, RLS, state machine, ledger, webhooks, rules engine, sync protocol), shared logic and UI against mocks/fixtures. Mark anything needing a device or live provider as `NEEDS_DEVICE` / `NEEDS_PROVIDER` in `STATE.md`; never fake a pass. Integrations are written behind interfaces with a recorded-fixture adapter.
+Web app: `cd web && npm test` (unit + screen tests), `npm run build`, `npm run screenshots` (Playwright, writes web/screenshots/, fails on console errors or missing translations).
 Local DB: the setup script installs PostgreSQL + PostGIS; tests run against it: `bash scripts/test-db.sh start|reset|schema|rls|test|psql` (`schema` applies a Supabase shim plus `db/migrations/*.sql` in order; `rls` fails if any table lacks RLS; `test` rebuilds and runs `tests/db/*_test.sql`).
 
 ## Stack
