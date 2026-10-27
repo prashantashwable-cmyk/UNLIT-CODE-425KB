@@ -48,6 +48,8 @@ insert into evidence_asset (id, project_id, captured_by, kind, sha256, original_
 
 -- ---------- rules are data ----------
 select t.eq((select count(*) from side_state_rule where from_side = 'cancelled'), 0, 'Cancelled is final: no rule leaves it');
+select t.throws($q$insert into side_state_rule (from_side, to_side, allowed_roles) values ('cancelled', 'none', '{admin}')$q$,
+  '23514', 'Cancelled stays final even if someone edits the rules later');
 select t.eq((select count(*) from side_state_rule where 'owner' = any (allowed_roles)), 0, 'Owner does not set side states');
 select t.ok((select causes @> '{customer,supplier,weather,permit,defect}' and min_evidence >= 1
              from side_state_rule where from_side = 'none' and to_side = 'on_hold'), 'On hold needs a cause from §16.3 and proof');
