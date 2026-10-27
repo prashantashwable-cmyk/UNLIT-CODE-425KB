@@ -12,7 +12,7 @@ Test IDs refer to `docs/data/tests.jsonl` (grep `T-0xx`).
 ## Phase 1 — Foundation  (M1, M12, M15; SCR-001–020)
 - [ ] ☁ Migrations from `docs/appendix/schema-skeleton.sql` (it is an unexecuted draft: fix syntax, run it, add the "not shown" tables from §29.1)
 - [x] ☁ Use `bash scripts/test-db.sh schema` then `bash scripts/test-db.sh rls`; exit criterion is zero rows from rls_coverage.sql (done 2026-10-27 for the 20 draft tables; `test-db.sh test` runs tests/db)
-- [ ] ☁ RLS on every table + `apply_stage_transition` (idempotent, no self-approval, proofs + approver roles checked) + RLS tests (T-001, T-002, T-098)
+- [x] ☁ RLS on every table + `apply_stage_transition` (idempotent, no self-approval, proofs + approver roles checked) + RLS tests (T-098 covered; T-001 not covered, T-002 partial: see STATE.md) — 2026-10-27
 - [ ] ☁ Auth/OTP, role assignment, delegate/backup approver, audit log (append-only), outbox
 - [ ] ☁ Evidence asset model + checks + sync protocol (`captured→queued→uploading→server_received→checked→accepted/rejected`) (T-062–T-069)
 - [ ] ☁ Design tokens → theme, i18n loader from messages.draft.json (mr/hi/en), scale slider with clamped critical controls (DEC-024)

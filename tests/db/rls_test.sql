@@ -6,37 +6,7 @@
 \set QUIET on
 \o /dev/null
 begin;
-create schema t;
-grant usage on schema t to anon, authenticated, service_role;
-
--- Act as an API caller: uid null = anon, else authenticated with that JWT subject.
-create function t.login(uid uuid) returns void language plpgsql as $$
-begin
-  perform set_config('request.jwt.claim.sub', coalesce(uid::text, ''), true);
-  perform set_config('role', case when uid is null then 'anon' else 'authenticated' end, true);
-end $$;
-
-create function t.eq(actual bigint, expected bigint, label text) returns void language plpgsql as $$
-begin
-  if actual is distinct from expected then
-    raise exception 'FAIL % (as %): expected %, got %', label, current_user, expected, actual;
-  end if;
-  raise notice 'ok - %', label;
-end $$;
-
--- Runs sql as the current role; passes only if it raises the given SQLSTATE.
-create function t.throws(sql text, state text, label text) returns void language plpgsql as $$
-begin
-  execute sql;
-  raise exception 'FAIL % (as %): expected error %, statement succeeded', label, current_user, state;
-exception when others then
-  if sqlstate = 'P0001' and sqlerrm like 'FAIL %' then raise; end if;
-  if sqlstate <> state then
-    raise exception 'FAIL % (as %): expected error %, got % %', label, current_user, state, sqlstate, sqlerrm;
-  end if;
-  raise notice 'ok - %', label;
-end $$;
-grant execute on all functions in schema t to anon, authenticated, service_role;
+\ir helpers.sql
 
 -- ---------- fixtures (as table owner, bypasses RLS) ----------
 insert into user_account (id, phone_e164, display_name) values
@@ -48,7 +18,8 @@ insert into user_account (id, phone_e164, display_name) values
   ('00000000-0000-0000-0000-0000000000b3', '+919800000013', 'tech unassigned'),
   ('00000000-0000-0000-0000-0000000000c1', '+919800000021', 'customer'),
   ('00000000-0000-0000-0000-0000000000c2', '+919800000022', 'qc'),
-  ('00000000-0000-0000-0000-0000000000c3', '+919800000023', 'supplier');
+  ('00000000-0000-0000-0000-0000000000c3', '+919800000023', 'supplier'),
+  ('00000000-0000-0000-0000-0000000000c4', '+919800000024', 'sales');
 insert into role_assignment (user_id, role, valid_to) values
   ('00000000-0000-0000-0000-0000000000a1', 'admin', null),
   ('00000000-0000-0000-0000-0000000000a2', 'owner', null),
@@ -58,7 +29,8 @@ insert into role_assignment (user_id, role, valid_to) values
   ('00000000-0000-0000-0000-0000000000b3', 'technician', null),
   ('00000000-0000-0000-0000-0000000000c1', 'customer', null),
   ('00000000-0000-0000-0000-0000000000c2', 'qc', null),
-  ('00000000-0000-0000-0000-0000000000c3', 'supplier', null);
+  ('00000000-0000-0000-0000-0000000000c3', 'supplier', null),
+  ('00000000-0000-0000-0000-0000000000c4', 'sales', null);
 insert into site (id, name, geom) values
   ('00000000-0000-0000-0000-00000000005a', 'site A', 'SRID=4326;POINT(73.85 18.52)'),
   ('00000000-0000-0000-0000-00000000005b', 'site B', 'SRID=4326;POINT(73.80 18.50)');
@@ -73,8 +45,8 @@ insert into project_assignment (project_id, user_id, role, access_until) values
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000b2', 'technician', now() - interval '1 day'),
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c1', 'customer', null),
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c2', 'qc', null),
-  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c3', 'supplier', null);
-insert into stage_transition (from_stage, to_stage) values ('lead_captured', 'lead_verified');
+  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c3', 'supplier', null),
+  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c4', 'sales', null);
 insert into stage_event (project_id, actor_id, actor_role, from_stage, to_stage, idempotency_key) values
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000a1', 'admin', null, 'lead_captured', 'k1');
 insert into evidence_asset (id, project_id, captured_by, kind, sha256, original_uri, client_time) values
@@ -159,7 +131,7 @@ select t.eq((select count(*) from rule_config), 0, 'technician never sees rule c
 select t.throws($$select count(*) from provider_webhook$$, '42501', 'provider webhooks are server-only (no grant)');
 select t.eq((select count(*) from user_account), 1, 'technician sees only own account row');
 select t.eq((select count(*) from role_assignment), 1, 'technician sees only own role rows');
-select t.eq((select count(*) from stage_transition), 1, 'stage transition rules are readable');
+select t.eq((select count(*) from stage_transition), 15, 'stage transition rules are readable');
 -- T-001 (database part): phone numbers are not readable through the API roles, even own row; server reads and audits.
 select t.throws($$select phone_e164 from user_account$$, '42501', 'worker phone column hidden from API roles (masking; not T-001)');
 select t.throws($$select * from user_account$$, '42501', 'select * on user_account is denied (no phone leak)');
@@ -209,6 +181,16 @@ select t.eq((select count(*) from stage_event), 0, 'supplier gets no stage event
 select t.eq((select count(*) from quote_version), 0, 'supplier never sees customer quote');
 reset role;
 
+-- ---------- sales on the project ----------
+select t.login('00000000-0000-0000-0000-0000000000c4');
+select t.eq((select count(*) from project), 1, 'sales sees assigned project');
+select t.eq((select count(*) from site), 1, 'sales sees assigned site (matrix: S)');
+select t.eq((select count(*) from quote_version), 1, 'sales sees quote (matrix: S/D to bot limit)');
+select t.eq((select count(*) from payment), 1, 'sales sees payment status (matrix: S)');
+select t.eq((select count(*) from ledger_entry), 0, 'sales never sees ledger');
+select t.eq((select count(*) from evidence_asset), 0, 'sales does not see technician evidence');
+reset role;
+
 -- ---------- admin ----------
 select t.login('00000000-0000-0000-0000-0000000000a1');
 select t.eq((select count(*) from project), 2, 'admin sees all projects');
@@ -217,7 +199,7 @@ select t.eq((select count(*) from ledger_entry), 2, 'admin sees ledger');
 select t.eq((select count(*) from payout), 2, 'admin sees all payouts');
 select t.eq((select count(*) from audit_event), 1, 'admin sees audit log');
 select t.eq((select count(*) from rule_config), 1, 'admin sees rule config');
-select t.eq((select count(*) from user_account), 9, 'admin sees all accounts (without phone column)');
+select t.eq((select count(*) from user_account), 10, 'admin sees all accounts (without phone column)');
 select t.throws($$update payment set status = 'confirmed'$$, '42501', 'admin cannot set payment status by hand (webhook only)');
 select t.throws($$insert into ledger_entry (journal_id, account, debit_paise) values ('00000000-0000-0000-0000-0000000000d1', 'x', 1)$$,
   '42501', 'admin cannot post ledger entries directly');
@@ -255,7 +237,7 @@ reset role;
 -- Fire the deferred balance checks first so TRUNCATE is refused by our trigger, not by pending events.
 set constraints all immediate;
 select t.throws($$truncate evidence_asset cascade$$, 'P0001', 'TRUNCATE on evidence blocked by statement trigger');
-select t.throws($$truncate stage_event$$, 'P0001', 'TRUNCATE on stage_event blocked');
+select t.throws($$truncate stage_event cascade$$, 'P0001', 'TRUNCATE on stage_event blocked');
 select t.throws($$truncate ledger_entry$$, 'P0001', 'TRUNCATE on ledger_entry blocked');
 select t.throws($$truncate audit_event$$, 'P0001', 'TRUNCATE on audit_event blocked');
 select t.throws($$update consent_record set granted = false$$, 'P0001', 'consent records are append-only (withdrawal is a new row)');

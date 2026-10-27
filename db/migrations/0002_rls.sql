@@ -45,7 +45,7 @@ $$;
 -- Supplier is left out: matrix gives it the delivery point and own orders only (dedicated views later).
 create function app.can_see_project(p uuid) returns boolean language sql stable as $$
   select app.is_staff()
-      or app.assigned_as(p, array['rider','technician','trainee','qc','customer','negotiator','nbfc','coordinator']);
+      or app.assigned_as(p, array['rider','technician','trainee','qc','customer','sales','negotiator','nbfc','coordinator']);
 $$;
 
 create function app.can_see_lift(l uuid) returns boolean
@@ -53,14 +53,14 @@ language sql stable security definer set search_path = public, pg_temp as $$
   select exists (select 1 from project p where p.lift_id = l and app.can_see_project(p.id));
 $$;
 
--- Matrix "Site location/photos": assigned field roles, Customer own, Negotiator/NBFC S, Coordinator assigned sites.
+-- Matrix "Site location/photos": assigned field roles, Customer own, Sales/Negotiator/NBFC S, Coordinator assigned sites.
 -- Supplier gets the delivery point only, Owner a summary (dedicated views later), so no full site row for either.
 create function app.can_see_site(s uuid) returns boolean
 language sql stable security definer set search_path = public, pg_temp as $$
   select app.is_admin() or exists (
     select 1 from lift l join project p on p.lift_id = l.id
     where l.site_id = s
-      and app.assigned_as(p.id, array['technician','trainee','qc','customer','negotiator','nbfc','coordinator']));
+      and app.assigned_as(p.id, array['technician','trainee','qc','customer','sales','negotiator','nbfc','coordinator']));
 $$;
 
 -- Evidence: matrix "Capture evidence" = assigned field roles. Captures on a project follow the project's time box
@@ -127,10 +127,10 @@ create policy evidence_asset_read on evidence_asset for select to authenticated 
 grant select on evidence_check to authenticated;
 create policy evidence_check_read on evidence_check for select to authenticated using (app.can_see_evidence(evidence_id));
 
--- Matrix "Quoted price": Customer S, Negotiator S/D, NBFC S, Admin/Owner; never Rider/Technician/QC/Supplier.
+-- Matrix "Quoted price": Customer S, Sales S/D to bot limit, Negotiator S/D, NBFC S, Admin/Owner; never Rider/Technician/QC/Supplier.
 grant select on quote_version to authenticated;
 create policy quote_version_read on quote_version for select to authenticated
-  using (app.is_staff() or app.assigned_as(project_id, array['customer','negotiator','nbfc']));
+  using (app.is_staff() or app.assigned_as(project_id, array['customer','sales','negotiator','nbfc']));
 
 -- Ledger rows: Admin only. Owner "totals" and worker "own earnings" come as aggregate views later.
 grant select on ledger_journal to authenticated;
@@ -140,10 +140,10 @@ create policy ledger_entry_read on ledger_entry for select to authenticated usin
 
 -- provider_webhook: server only (no grant, no policy).
 
--- Matrix "Payment status": Customer own, Negotiator S, Admin/Owner. Technician/QC "paid/not paid" needs a status-only view later.
+-- Matrix "Payment status": Customer own, Sales S, Negotiator S, Admin/Owner. Technician/QC "paid/not paid" needs a status-only view later.
 grant select on payment to authenticated;
 create policy payment_read on payment for select to authenticated
-  using (app.is_staff() or app.assigned_as(project_id, array['customer','negotiator']));
+  using (app.is_staff() or app.assigned_as(project_id, array['customer','sales','negotiator']));
 
 -- Matrix "Earnings": own; Admin all; Owner totals only (aggregate view later).
 grant select on payout to authenticated;
