@@ -44,7 +44,7 @@ Sessions can end at any time (usage limit, timeout). Keep exactly one line `NEXT
 
 ## Cloud-session limits (Claude Code on the web)
 No Android device/emulator, no camera, no GPS, no real payment/WhatsApp/eSign providers. So in cloud: build and test backend (schema, RLS, state machine, ledger, webhooks, rules engine, sync protocol), shared logic and UI against mocks/fixtures. Mark anything needing a device or live provider as `NEEDS_DEVICE` / `NEEDS_PROVIDER` in `STATE.md`; never fake a pass. Integrations are written behind interfaces with a recorded-fixture adapter.
-Local DB: the setup script installs PostgreSQL + PostGIS; tests run against it: `bash scripts/test-db.sh start|reset|schema|rls|psql` (`schema` applies the draft plus a Supabase shim; `rls` lists tables lacking RLS).
+Local DB: the setup script installs PostgreSQL + PostGIS; tests run against it: `bash scripts/test-db.sh start|reset|schema|rls|test|psql` (`schema` applies a Supabase shim plus `db/migrations/*.sql` in order; `rls` fails if any table lacks RLS; `test` rebuilds and runs `tests/db/*_test.sql`).
 
 ## Stack
 Decided 2026-10-27 (DEC-012, `docs/adr/0001-stack.md`): PostgreSQL+PostGIS on Supabase (RLS on every table, rules in Postgres functions), TypeScript server and React web for non-field roles, **native Android (Kotlin + Jetpack Compose) for Rider/Technician/QC, Android-only at launch**. Release 1 = §39 phases, Pune pilot (DEC-014).

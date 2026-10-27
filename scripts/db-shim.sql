@@ -8,3 +8,8 @@ create schema if not exists auth;
 create or replace function auth.uid() returns uuid language sql stable as
 $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth to authenticated, anon, service_role;
+-- Supabase grants table privileges to API roles by default, so RLS policies (not grants) are the real gate. Mirror that.
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
+grant usage on schema public to anon, authenticated, service_role;
